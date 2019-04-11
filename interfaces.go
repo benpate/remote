@@ -14,24 +14,6 @@ import (
 	"github.com/benpate/derp"
 )
 
-const (
-
-	// ContentType is the string used in the HTTP header to designate a MIME type
-	ContentType = "Content-Type"
-
-	// ContentTypePlain is the default plaintext MIME type
-	ContentTypePlain = "text/plain"
-
-	// ContentTypeJSON is the standard MIME Type for JSON content
-	ContentTypeJSON = "application/json"
-
-	// ContentTypeForm is the standard MIME Type for Form encoded content
-	ContentTypeForm = "application/x-www-form-urlencoded"
-
-	// ContentTypeXML is the standard MIME Type for XML content
-	ContentTypeXML = "application/xml"
-)
-
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
 	Client       *http.Client
@@ -44,6 +26,14 @@ type Transaction struct {
 	ResultObject interface{}
 	ErrorObject  interface{}
 	Middleware   []Middleware
+}
+
+// Middleware is a decorator that can modify the request before it is sent to the remote HTTP server,
+// or modify the response after it is returned by the remote HTTP server.
+type Middleware interface {
+	Config(*Transaction) *derp.Error
+	Request(*http.Request) *derp.Error
+	Response(*http.Response) *derp.Error
 }
 
 // ErrorReport includes all the data returned by a transaction if it throws an error for any reason.
@@ -245,10 +235,4 @@ func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
 
 func (t *Transaction) getErrorReport() ErrorReport {
 	return ErrorReport{}
-}
-
-type Middleware interface {
-	Config(*Transaction) *derp.Error
-	Request(*http.Request) *derp.Error
-	Response(*http.Response) *derp.Error
 }

@@ -1,7 +1,7 @@
 # remote
-Simple, chainable API for making HTTP requests to remote servers using Go.
+Crazy simple, chainable API for making HTTP requests to remote servers using Go.
 
-Inspired by [Wrecker, from Brandon Romano](https://github.com/BrandonRomano/wrecker)
+Inspired by [Brandon Romano's Wrecker](https://github.com/BrandonRomano/wrecker)
 
 ## Get data from an HTTP server
 ```go
@@ -16,15 +16,11 @@ errorResponse := map[string]string{}
 
 // Get data from a remote server
 transaction := remote.Get("https://jsonplaceholder.typicode.com/users").
-	Result(users, errorResponse)
+	Result(users, errorResponse) // parse response (or error) into a data structure
 
 if err := transaction.Do(); err != nil {
 	// Handle errors...
-	// http error codes are in the err object.
-	// http body is parsed into errorResponse
 }
-
-// Now the `users` data structure is available here.
 ```
 
 
@@ -39,13 +35,22 @@ user := map[string]string{
 response := map[string]string{}
 errorResponse := map[string]string{}
 
+// Post data to the remote server (use your own URL)
 transaction := remote.Post("https://hookbin.com/abc123").
-	JSON(user).
-	Result(response, errorResonse)
+	JSON(user). // encode the user object into the request body as JSON
+	Result(response, errorResonse) // parse response (or error) into a data structure
 
 if err := transaction.Do(); err != nil {
-	// Handle errors here...
+	// Handle errors...
 }
-
-// Use the `response` value here, if needed
 ```
+
+
+## Middleware
+Middleware allows you to modify a request before it is sent to the remote server, or modify the response after it is returned by the remote server.  Each middleware object includes three hooks
+
+**`Config(*Transaction)`** allows you to change the transaction configuration before it is compiled into an HTTP request.  This is typically the simplest, and easiest way to modify a request
+
+**`Request(*http.Request)`** allows you to modify the raw HTTP request before it is sent to the remote server.  This is useful in the rare cases when you need to make changes to a request that this library doesn't support.
+
+**`Response(*http.Response)`** allows you to modify the raw HTTP response before its results are parsed and returned to the caller.
