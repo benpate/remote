@@ -3,9 +3,9 @@ package remote
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -101,12 +101,7 @@ func (t *Transaction) Header(name string, value string) *Transaction {
 
 // ContentType sets the Content-Type header of the HTTP request.
 func (t *Transaction) ContentType(value string) *Transaction {
-	return t.Header("Content-Type", value)
-}
-
-// BasicAuth sets the value of a HTTP header for basic Authentication
-func (t *Transaction) BasicAuth(username, password string) *Transaction {
-	return t.Header("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+password)))
+	return t.Header(ContentType, value)
 }
 
 // Body sets the request body, to be encoded as plain text
@@ -155,8 +150,10 @@ func (t *Transaction) Send() *derp.Error {
 
 	// Execute middleware.Config
 	for _, middleware := range t.Middleware {
-		if err := middleware.Config(t); err != nil {
-			return derp.New("remote.Result", "Middleware Error: Config", err, 0, t.getErrorReport())
+		if middleware != nil {
+			if err := middleware.Config(t); err != nil {
+				return derp.New("remote.Result", "Middleware Error: Config", err, 0, t.getErrorReport())
+			}
 		}
 	}
 
@@ -178,18 +175,85 @@ func (t *Transaction) Send() *derp.Error {
 		return derp.New("remote.Result", "Error creating HTTP request", err, 0, t.getErrorReport())
 	}
 
+	// Add headers to httpRequest
+	for key, value := range t.HeaderValues {
+		httpRequest.Header.Add(key, value)
+	}
+
 	// Execute middleware.Request
 	for _, middleware := range t.Middleware {
-		if err := middleware.Request(httpRequest); err != nil {
-			return derp.New("remote.Result", "Middleware Error: Request", err, 0, t.getErrorReport())
+		if middleware != nil {
+			if err := middleware.Request(httpRequest); err != nil {
+				return derp.New("remote.Result", "Middleware Error: Request", err, 0, t.getErrorReport())
+			}
 		}
+	}
+
+	// Executing request using HTTP client
+	response, errr := t.Client.Do(httpRequest)
+
+	if errr != nil {
+		return derp.New("remote.Result", "Error executing HTTP request", errr, response.StatusCode, t.getErrorReport())
 	}
 
 	// Execute middleware.Response
 	for _, middleware := range t.Middleware {
-		middleware.Config(t)
+		if middleware != nil {
+			if err := middleware.Response(response); err != nil {
+				return derp.New("remote.Result", "Middleware Error: Response", err, 0, t.getErrorReport())
+			}
+		}
 	}
 
+	// Packing into response
+	body, errr := ioutil.ReadAll(response.Body)
+
+	if errr != nil {
+		return derp.New("netclient.Do", "Error Reading Response Body", errr, 0, t.getErrorReport(), response)
+	}
+
+	// If Response Code is NOT "OK", then handle the error
+	if (response.StatusCode < 200) || (response.StatusCode > 299) {
+
+		/*
+			errorReport := HTTPErrorReport{
+				Request:    t.getFullURL(),
+				StatusCode: response.StatusCode,
+				Status:     http.StatusText(response.StatusCode),
+				Header:     response.Header,
+				Body:       string(body),
+			}
+		*/
+
+		err := derp.New("netclient.Do", "Error Result from Remote Service", nil, response.StatusCode, t.getErrorReport())
+
+		// If we ALSO have an error object, then try to process the response body into that
+		if t.FailureObject != nil {
+			if e := t.readResponseBody(body, t.FailureObject); e != nil {
+				err = derp.New("netclient.Do", "Error Parsing Error Body", e, 0, body)
+			}
+		}
+
+		return err
+	}
+
+	// Fall through to here means that this is a successful response.
+	// Try to read the response body
+	if err := t.readResponseBody(body, t.SuccessObject); err != nil {
+
+		/*
+			errorReport := HTTPErrorReport{
+				Request:    t.getFullURL(),
+				StatusCode: response.StatusCode,
+				Status:     http.StatusText(response.StatusCode),
+				Header:     response.Header,
+				Body:       string(body),
+			}
+		*/
+		return derp.New("netclient.Do", "Error reading response body", err, 0, t.getErrorReport())
+	}
+
+	// Silence means success.
 	return nil
 }
 
@@ -241,6 +305,41 @@ func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
 	return strings.NewReader(""), derp.New("remote.getRequestBodyReader", "Unsupported Content-Type", nil, 0, contentType)
 }
 
+// readResponseBody unmarshalls the response body into the result
+func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Error {
+
+	// TODO: inspect MIME Type and use the appropriate decoder.
+
+	// If we have defined a result variable, then try to unmarshal the results
+	// into it.
+	if result != nil {
+
+		// If result is a pointer to a string (or slice of bytes) then just populate
+		// the response directly into the result
+		switch result.(type) {
+
+		case *[]byte, []byte:
+			result = body
+			return nil
+
+		case *string, string:
+			result = string(body)
+			return nil
+		}
+
+		// Fall through to here means its a more complex data type.  Try to
+		// unmarshal based on content type
+
+		// Parse the result and return to the caller.
+		if err := json.Unmarshal(body, result); err != nil {
+			return derp.New("netclient.Do", "Error Unmarshalling JSON Response", err, 0, string(body), result)
+		}
+	}
+
+	return nil
+}
+
+//TODO: finish error reporting.
 func (t *Transaction) getErrorReport() ErrorReport {
 	return ErrorReport{}
 }
