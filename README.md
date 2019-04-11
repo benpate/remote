@@ -56,32 +56,33 @@ Middleware allows you to modify a request before it is sent to the remote server
 
 ## Included Middleware
 
-**Authorization** adds a simple `Authorization` header to your HTTP request
 ```go
+// AUTHORIZATION adds a simple "Authorization" header to your request
 remote.Get("https://jsonplaceholder.typicode.com/users").
 	Use(middleware.Authorization(myAuthorizationKey)).
 	Result(users, nil).
 	Send()
 ```
 
-**/middleware/basicauth.go** adds a `Authorization` header to your HTTP request, which is Base 64 encoded to follow the basic authorization standard.
 ```go
+// BASIC AUTH adds a Base64 encoded "Authorization" header to your request,
+// which follows the basic authorization standard
 remote.Get("https://jsonplaceholder.typicode.com/users").
 	Use(middleware.BasicAuth(username, password)).
 	Result(users, nil).
 	Send()
 ```
 
-**/middleware/debug.go** prints debugging statements to the console to help you see what's happening with your HTTP requests
 ```go
+// DEBUG prints debugging statements to the console
 remote.Get("https://jsonplaceholder.typicode.com/users").
 	Use(middleware.Debug()).
 	Result(users, nil).
 	Send()
 ```
 
-**/middleware/opaque.go** adds an "Opaque" value to the HTTP request.  This should not be required under most circumstances.
 ```go
+// OPAQUE makes direct changes to the URL string.
 remote.Get("https://jsonplaceholder.typicode.com/users").
 	Use(middleware.Opaque(opaqueURLStringHere)).
 	Result(users, nil).
