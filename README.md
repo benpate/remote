@@ -3,6 +3,9 @@ Crazy simple, chainable API for making HTTP requests to remote servers using Go.
 
 Inspired by [Brandon Romano's Wrecker](https://github.com/BrandonRomano/wrecker)
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/benpate/remote)](https://goreportcard.com/report/github.com/benpate/remote)
+[![Documentation](https://godoc.org/github.com/benpate/remote?status.svg)](http://godoc.org/github.com/benpate/remote)
+
 ## Get data from an HTTP server
 ```go
 users := []struct {
