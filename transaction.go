@@ -149,12 +149,8 @@ func (t *Transaction) Send() *derp.Error {
 	var bodyReader io.Reader
 
 	// Execute middleware.Config
-	for _, middleware := range t.Middleware {
-		if middleware != nil {
-			if err := middleware.Config(t); err != nil {
-				return derp.New("remote.Result", "Middleware Error: Config", err, 0, t.getErrorReport())
-			}
-		}
+	if err := t.doMiddlewareConfig(); err != nil {
+		return err
 	}
 
 	// GET methods don't have an HTTP Body.  For all other methods,
@@ -181,12 +177,8 @@ func (t *Transaction) Send() *derp.Error {
 	}
 
 	// Execute middleware.Request
-	for _, middleware := range t.Middleware {
-		if middleware != nil {
-			if err := middleware.Request(httpRequest); err != nil {
-				return derp.New("remote.Result", "Middleware Error: Request", err, 0, t.getErrorReport())
-			}
-		}
+	if err := t.doMiddlewareRequest(httpRequest); err != nil {
+		return err
 	}
 
 	// Executing request using HTTP client
@@ -197,12 +189,8 @@ func (t *Transaction) Send() *derp.Error {
 	}
 
 	// Execute middleware.Response
-	for _, middleware := range t.Middleware {
-		if middleware != nil {
-			if err := middleware.Response(response); err != nil {
-				return derp.New("remote.Result", "Middleware Error: Response", err, 0, t.getErrorReport())
-			}
-		}
+	if err := t.doMiddlewareResponse(response); err != nil {
+		return err
 	}
 
 	// Packing into response
@@ -225,16 +213,14 @@ func (t *Transaction) Send() *derp.Error {
 			}
 		*/
 
-		err := derp.New("netclient.Do", "Error Result from Remote Service", nil, response.StatusCode, t.getErrorReport())
-
 		// If we ALSO have an error object, then try to process the response body into that
 		if t.FailureObject != nil {
 			if e := t.readResponseBody(body, t.FailureObject); e != nil {
-				err = derp.New("netclient.Do", "Error Parsing Error Body", e, 0, body)
+				return derp.New("netclient.Do", "Error Parsing Error Body", e, 0, body)
 			}
 		}
 
-		return err
+		return derp.New("netclient.Do", "Error Result from Remote Service", nil, response.StatusCode, t.getErrorReport())
 	}
 
 	// Fall through to here means that this is a successful response.
