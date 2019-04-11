@@ -51,8 +51,21 @@ if err := transaction.Send(); err != nil {
 ```
 
 
-## Middleware
+# Middleware
 Middleware allows you to modify a request before it is sent to the remote server, or modify the response after it is returned by the remote server.  Each middleware object includes three hooks
+
+## Included Middleware
+
+**Authorization** adds a simple `Authorization` header to your HTTP request
+
+**Basic Auth** adds a `Authorization` header to your HTTP request, which is Base 64 encoded to follow the basic authorization standard.
+
+**Debug** prints debugging statements to the console to help you see what's happening with your HTTP requests
+
+**Opaque** adds an "Opaque" value to the HTTP request.  This should not be required under most circumstances.
+
+## Writing Custom Middleware
+It's easy to write additional, custom middleware for your project.  Just follow the samples in the `/middleware` folder, and pass in any object that follows the `Middleware` interface.
 
 **`Config(*Transaction)`** allows you to change the transaction configuration before it is compiled into an HTTP request.  This is typically the simplest, and easiest way to modify a request
 
