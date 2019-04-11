@@ -56,13 +56,13 @@ Middleware allows you to modify a request before it is sent to the remote server
 
 ## Included Middleware
 
-**Authorization** adds a simple `Authorization` header to your HTTP request
+**/middleware/authorization.go** adds a simple `Authorization` header to your HTTP request
 
-**Basic Auth** adds a `Authorization` header to your HTTP request, which is Base 64 encoded to follow the basic authorization standard.
+**/middleware/basicauth.go** adds a `Authorization` header to your HTTP request, which is Base 64 encoded to follow the basic authorization standard.
 
-**Debug** prints debugging statements to the console to help you see what's happening with your HTTP requests
+**/middleware/debug.go** prints debugging statements to the console to help you see what's happening with your HTTP requests
 
-**Opaque** adds an "Opaque" value to the HTTP request.  This should not be required under most circumstances.
+**/middleware/opaque.go** adds an "Opaque" value to the HTTP request.  This should not be required under most circumstances.
 
 ## Writing Custom Middleware
 It's easy to write additional, custom middleware for your project.  Just follow the samples in the `/middleware` folder, and pass in any object that follows the `Middleware` interface.

@@ -7,7 +7,7 @@ import (
 	"github.com/benpate/remote"
 )
 
-// Authorization is a sample Interceptor that adds a HTTP "Authorization" header to every request.
+// Authorization is a sample middleware that adds a HTTP "Authorization" header to every request.
 func Authorization(auth string) Middleware {
 
 	return Middleware{
