@@ -56,13 +56,37 @@ Middleware allows you to modify a request before it is sent to the remote server
 
 ## Included Middleware
 
-**/middleware/authorization.go** adds a simple `Authorization` header to your HTTP request
+**Authorization** adds a simple `Authorization` header to your HTTP request
+```go
+remote.Get("https://jsonplaceholder.typicode.com/users").
+	Use(middleware.Authorization(myAuthorizationKey)).
+	Result(users, nil).
+	Send()
+```
 
 **/middleware/basicauth.go** adds a `Authorization` header to your HTTP request, which is Base 64 encoded to follow the basic authorization standard.
+```go
+remote.Get("https://jsonplaceholder.typicode.com/users").
+	Use(middleware.BasicAuth(username, password)).
+	Result(users, nil).
+	Send()
+```
 
 **/middleware/debug.go** prints debugging statements to the console to help you see what's happening with your HTTP requests
+```go
+remote.Get("https://jsonplaceholder.typicode.com/users").
+	Use(middleware.Debug()).
+	Result(users, nil).
+	Send()
+```
 
 **/middleware/opaque.go** adds an "Opaque" value to the HTTP request.  This should not be required under most circumstances.
+```go
+remote.Get("https://jsonplaceholder.typicode.com/users").
+	Use(middleware.Opaque(opaqueURLStringHere)).
+	Result(users, nil).
+	Send()
+```
 
 ## Writing Custom Middleware
 It's easy to write additional, custom middleware for your project.  Just follow the samples in the `/middleware` folder, and pass in any object that follows the `Middleware` interface.
