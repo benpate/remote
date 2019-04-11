@@ -21,7 +21,7 @@ errorResponse := map[string]string{}
 transaction := remote.Get("https://jsonplaceholder.typicode.com/users").
 	Result(users, errorResponse) // parse response (or error) into a data structure
 
-if err := transaction.Do(); err != nil {
+if err := transaction.Send(); err != nil {
 	// Handle errors...
 }
 ```
@@ -43,7 +43,7 @@ transaction := remote.Post("https://hookbin.com/abc123").
 	JSON(user). // encode the user object into the request body as JSON
 	Result(response, errorResonse) // parse response (or error) into a data structure
 
-if err := transaction.Do(); err != nil {
+if err := transaction.Send(); err != nil {
 	// Handle errors...
 }
 ```

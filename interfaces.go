@@ -16,16 +16,16 @@ import (
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
-	Client       *http.Client
-	Method       string
-	URLValue     string
-	HeaderValues map[string]string
-	QueryString  url.Values
-	FormData     url.Values
-	BodyObject   interface{}
-	ResultObject interface{}
-	ErrorObject  interface{}
-	Middleware   []Middleware
+	Client        *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
+	Method        string            // HTTP method to use when sending the request
+	URLValue      string            // URL of the remote server to call
+	HeaderValues  map[string]string // HTTP Header values to send in the request
+	QueryString   url.Values        // Query String to append to the URL
+	FormData      url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
+	BodyObject    interface{}       // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	SuccessObject interface{}       // Object to parse the response into -- IF the status code is successful
+	FailureObject interface{}       // Object to parse the response into -- IF the status code is NOT successful
+	Middleware    []Middleware      // Middleware to execute on the request/response
 }
 
 // Middleware is a decorator that can modify the request before it is sent to the remote HTTP server,
@@ -140,7 +140,15 @@ func (t *Transaction) Use(middleware ...Middleware) *Transaction {
 	return t
 }
 
-func (t *Transaction) Result(success interface{}, failure interface{}) *derp.Error {
+// Result sets the objects for parsing HTTP success and failure responses
+func (t *Transaction) Result(success interface{}, failure interface{}) *Transaction {
+	t.SuccessObject = success
+	t.FailureObject = failure
+	return t
+}
+
+// Send executes the transaction, sending the request to the remote server.
+func (t *Transaction) Send() *derp.Error {
 
 	var err *derp.Error
 	var bodyReader io.Reader
