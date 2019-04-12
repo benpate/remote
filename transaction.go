@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/benpate/derp"
 )
@@ -26,65 +25,6 @@ type Transaction struct {
 	SuccessObject interface{}       // Object to parse the response into -- IF the status code is successful
 	FailureObject interface{}       // Object to parse the response into -- IF the status code is NOT successful
 	Middleware    []Middleware      // Middleware to execute on the request/response
-}
-
-// Middleware is a decorator that can modify the request before it is sent to the remote HTTP server,
-// or modify the response after it is returned by the remote HTTP server.
-type Middleware interface {
-	Config(*Transaction) *derp.Error
-	Request(*http.Request) *derp.Error
-	Response(*http.Response) *derp.Error
-}
-
-// ErrorReport includes all the data returned by a transaction if it throws an error for any reason.
-type ErrorReport struct {
-	Request    string
-	StatusCode int
-	Status     string
-	Header     http.Header
-	Body       string
-}
-
-func newTransaction(method string, urlValue string) *Transaction {
-
-	t := &Transaction{
-		Client:       &http.Client{Timeout: 10 * time.Second},
-		Method:       method,
-		URLValue:     urlValue,
-		HeaderValues: map[string]string{},
-		QueryString:  url.Values{},
-		FormData:     url.Values{},
-		Middleware:   []Middleware{},
-	}
-
-	t.ContentType(ContentTypePlain)
-
-	return t
-}
-
-// Get creates a new HTTP request to the designated URL, using the GET method
-func Get(url string) *Transaction {
-	return newTransaction(http.MethodGet, url)
-}
-
-// Post creates a new HTTP request to the designated URL, using the POST method
-func Post(url string) *Transaction {
-	return newTransaction(http.MethodPost, url)
-}
-
-// Put creates a new HTTP request to the designated URL, using the PUT method
-func Put(url string) *Transaction {
-	return newTransaction(http.MethodPut, url)
-}
-
-// Patch creates a new HTTP request to the designated URL, using the PATCH method
-func Patch(url string) *Transaction {
-	return newTransaction(http.MethodPatch, url)
-}
-
-// Delete creates a new HTTP request to the designated URL, using the DELETE method.
-func Delete(url string) *Transaction {
-	return newTransaction(http.MethodDelete, url)
 }
 
 // Query sets a name/value pair in the URL query string.
@@ -135,8 +75,8 @@ func (t *Transaction) Use(middleware ...Middleware) *Transaction {
 	return t
 }
 
-// Result sets the objects for parsing HTTP success and failure responses
-func (t *Transaction) Result(success interface{}, failure interface{}) *Transaction {
+// Response sets the objects for parsing HTTP success and failure responses
+func (t *Transaction) Response(success interface{}, failure interface{}) *Transaction {
 	t.SuccessObject = success
 	t.FailureObject = failure
 	return t
@@ -188,16 +128,16 @@ func (t *Transaction) Send() *derp.Error {
 		return derp.New("remote.Result", "Error executing HTTP request", errr, response.StatusCode, t.getErrorReport())
 	}
 
-	// Execute middleware.Response
-	if err := t.doMiddlewareResponse(response); err != nil {
-		return err
-	}
-
 	// Packing into response
 	body, errr := ioutil.ReadAll(response.Body)
 
 	if errr != nil {
-		return derp.New("netclient.Do", "Error Reading Response Body", errr, 0, t.getErrorReport(), response)
+		return derp.New("remote.Send", "Error Reading Response Body", errr, 0, t.getErrorReport(), response)
+	}
+
+	// Execute middleware.Response
+	if err := t.doMiddlewareResponse(response, &body); err != nil {
+		return err
 	}
 
 	// If Response Code is NOT "OK", then handle the error
@@ -216,7 +156,7 @@ func (t *Transaction) Send() *derp.Error {
 		// If we ALSO have an error object, then try to process the response body into that
 		if t.FailureObject != nil {
 			if e := t.readResponseBody(body, t.FailureObject); e != nil {
-				return derp.New("netclient.Do", "Error Parsing Error Body", e, 0, body)
+				return derp.New("remote.Send", "Error Parsing Error Body", e, 0, body)
 			}
 		}
 
@@ -236,7 +176,7 @@ func (t *Transaction) Send() *derp.Error {
 				Body:       string(body),
 			}
 		*/
-		return derp.New("netclient.Do", "Error reading response body", err, 0, t.getErrorReport())
+		return derp.New("remote.Send", "Error in readResponseBody()", err, 0, t.getErrorReport())
 	}
 
 	// Silence means success.

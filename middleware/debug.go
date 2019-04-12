@@ -25,7 +25,7 @@ func Debug() Middleware {
 			return nil
 		},
 
-		Response: func(r *http.Response) *derp.Error {
+		Response: func(r *http.Response, body *[]byte) *derp.Error {
 
 			fmt.Println("")
 			fmt.Println("HTTP Response")
@@ -39,8 +39,7 @@ func Debug() Middleware {
 				fmt.Println("- ", i, ": ", r.Header.Get(i))
 			}
 
-			// TODO: get BODY working again.
-			// fmt.Println("Body: ", string(body))
+			fmt.Println("Body: ", string(body))
 			fmt.Println("")
 
 			return nil
