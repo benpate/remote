@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHookbinGet(t *testing.T) {
+func TestRequestBinGet(t *testing.T) {
+
+	// Check results at: https://pipedream.com/r/envocp9hr03ig
 
 	Get("https://envocp9hr03ig.x.pipedream.net").
 		Query("name1", "value1").
@@ -19,20 +21,23 @@ func TestHookbinGet(t *testing.T) {
 		Send()
 }
 
-func TestHookbinPost(t *testing.T) {
+func TestRequestBinPost(t *testing.T) {
 
 	body := map[string]string{
 		"hello":  "darkness",
-		"my old": "friend",
+		"my-old": "friend",
 	}
 
-	err := Post("https://envocp9hr03ig.x.pipedream.net").
-		JSON(body).
-		Header("User-Agent", "remote").
-		Send()
+	// Check results at: https://pipedream.com/r/envocp9hr03ig
 
-	t.Log(spew.Sdump(err))
-	t.Fail()
+	transaction := Post("https://envocp9hr03ig.x.pipedream.net/path/goes/here").
+		JSON(body).
+		Header("User-Agent", "remote")
+
+	if err := transaction.Send(); err != nil {
+		err.Report()
+		t.Fail()
+	}
 }
 
 func TestGet(t *testing.T) {
@@ -44,12 +49,18 @@ func TestGet(t *testing.T) {
 		Email    string
 	}{}
 
-	// Get data from a remote server
-	Get("https://jsonplaceholder.typicode.com/users").
-		Response(&users, nil).
-		Send()
+	transaction := Get("https://jsonplaceholder.typicode.com/users").
+		Response(&users, nil)
 
-	t.Log(spew.Sdump(users))
+	// Get data from a remote server
+	if err := transaction.Send(); err != nil {
+		err.Report()
+		t.Fail()
+	}
+
+	assert.Equal(t, users[0].Name, "Leanne Graham")
+	assert.Equal(t, users[0].Username, "Bret")
+	assert.Equal(t, users[0].Email, "Sincere@april.biz")
 }
 
 func TestPost(t *testing.T) {
@@ -78,21 +89,6 @@ func TestPost(t *testing.T) {
 	assert.Equal(t, success["third"], "3")
 }
 
-func TestPut(t *testing.T) {
-
-	ts := echoHeaderServer()
-	defer ts.Close()
-
-	success := ""
-	failure := map[string]interface{}{}
-
-	if err := Put(ts.URL).Response(&success, &failure).Send(); err != nil {
-		return
-	}
-
-	t.Log(spew.Sdump(success))
-}
-
 func echoBodyServer() *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -100,16 +96,5 @@ func echoBodyServer() *httptest.Server {
 		body := new(bytes.Buffer)
 		body.ReadFrom(r.Body)
 		w.Write(body.Bytes())
-	}))
-}
-
-func echoHeaderServer() *httptest.Server {
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := new(bytes.Buffer)
-		r.Header.Write(header)
-
-		spew.Dump(header.String())
-		r.Header.Write(w)
 	}))
 }
