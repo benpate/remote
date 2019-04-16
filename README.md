@@ -5,14 +5,14 @@
 [![Build Status](http://img.shields.io/travis/benpate/remote.svg?style=flat-square)](https://travis-ci.org/benpate/remote)
 [![Codecov](https://img.shields.io/codecov/c/github/benpate/remote.svg?style=flat-square)](https://codecov.io/gh/benpate/remote)
 
-## Crazy simple, chainable API for making HTTP requests to remote servers using Go.
+## Crazy Simple, Chainable HTTP Client for Go.
 
 Remote is a paper-thin wrapper on top of Go's HTTP library, that gives you sensible defaults, a pretty API with some modern conveniences, and full control of your HTTP requests.  It's the fastest and easiest way to make an HTTP call using Go.
 
 Inspired by [Brandon Romano's Wrecker](https://github.com/BrandonRomano/wrecker).  Thanks Brandon!
 
 
-### Get data from an HTTP server
+### How to Get data from an HTTP server
 ```go
 users := []struct {
 	ID string
@@ -33,7 +33,7 @@ if err := transaction.Send(); err != nil {
 ```
 
 
-### Post data to an HTTP server
+### How to Post/Put/Patch/Delete data to an HTTP server
 ```go
 user := map[string]string{
 	"id": "ABC123",
