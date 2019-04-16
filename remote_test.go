@@ -10,6 +10,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRequestMethods(t *testing.T) {
+
+	get := Get("someurl.com")
+	assert.Equal(t, "GET", get.Method)
+	assert.Equal(t, "someurl.com", get.URLValue)
+
+	post := Post("someurl.com")
+	assert.Equal(t, "POST", post.Method)
+	assert.Equal(t, "someurl.com", post.URLValue)
+
+	put := Put("someurl.com")
+	assert.Equal(t, "PUT", put.Method)
+	assert.Equal(t, "someurl.com", put.URLValue)
+
+	patch := Patch("someurl.com")
+	assert.Equal(t, "PATCH", patch.Method)
+	assert.Equal(t, "someurl.com", patch.URLValue)
+
+	delete := Delete("someurl.com")
+	assert.Equal(t, "DELETE", delete.Method)
+	assert.Equal(t, "someurl.com", delete.URLValue)
+}
+
 func TestRequestBinGet(t *testing.T) {
 
 	// Check results at: https://pipedream.com/r/envocp9hr03ig

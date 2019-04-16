@@ -6,15 +6,6 @@ import (
 	"time"
 )
 
-// ErrorReport includes all the data returned by a transaction if it throws an error for any reason.
-type ErrorReport struct {
-	Request    string
-	StatusCode int
-	Status     string
-	Header     http.Header
-	Body       string
-}
-
 func newTransaction(method string, urlValue string) *Transaction {
 
 	t := &Transaction{

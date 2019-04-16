@@ -23,7 +23,7 @@ users := []struct {
 }{}
 
 // Get data from a remote server
-transaction := remote.Get("https://jsonplaceholder.typicode.com/users").
+remote.Get("https://jsonplaceholder.typicode.com/users").
 	Result(users, nil).
 	Send()
 
@@ -43,7 +43,7 @@ user := map[string]string{
 response := map[string]string{}
 
 // Post data to the remote server (use your own URL)
-transaction := remote.Post("https://example.com/post-service").
+remote.Post("https://example.com/post-service").
 	JSON(user). // encode the user object into the request body as JSON
 	Result(response, nil). // parse response (or error) into a data structure
 	Send()
