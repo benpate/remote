@@ -6,12 +6,13 @@ import (
 	"strconv"
 
 	"github.com/benpate/derp"
+	"github.com/benpate/remote"
 )
 
 // Debug is a sample middleware that adds debugging output to every request.
-func Debug() Middleware {
+func Debug() remote.Middleware {
 
-	return Middleware{
+	return remote.Middleware{
 
 		Request: func(r *http.Request) *derp.Error {
 

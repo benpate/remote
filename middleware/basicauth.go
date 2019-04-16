@@ -8,8 +8,8 @@ import (
 )
 
 // BasicAuth sets the value of a HTTP header for basic Authentication
-func BasicAuth(username, password string) Middleware {
-	return Middleware{
+func BasicAuth(username, password string) remote.Middleware {
+	return remote.Middleware{
 
 		Config: func(transaction *remote.Transaction) *derp.Error {
 			transaction.Header("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+password)))

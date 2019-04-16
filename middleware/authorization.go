@@ -8,9 +8,9 @@ import (
 )
 
 // Authorization is a sample middleware that adds a HTTP "Authorization" header to every request.
-func Authorization(auth string) Middleware {
+func Authorization(auth string) remote.Middleware {
 
-	return Middleware{
+	return remote.Middleware{
 
 		// This is executed on every transaction before it is compiled into an HTTP request
 		Config: func(transaction *remote.Transaction) *derp.Error {
