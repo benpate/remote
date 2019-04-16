@@ -43,7 +43,7 @@ func TestRequestBinPost(t *testing.T) {
 func TestGet(t *testing.T) {
 
 	users := []struct {
-		ID       string
+		ID       int
 		Name     string
 		Username string
 		Email    string
