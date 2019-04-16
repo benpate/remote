@@ -103,7 +103,7 @@ func (t *Transaction) Send() *derp.Error {
 		bodyReader, err = t.getRequestBody()
 
 		if err != nil {
-			return derp.New("remote.Result", "Error Creating Request Body", 0, err)
+			return derp.New("remote.Result", "Error Creating Request Body", 0, err, t.ErrorReport())
 		}
 	}
 
@@ -159,16 +159,6 @@ func (t *Transaction) Send() *derp.Error {
 	// Fall through to here means that this is a successful response.
 	// Try to read the response body
 	if err := t.readResponseBody(body, t.SuccessObject); err != nil {
-
-		/*
-			errorReport := HTTPErrorReport{
-				Request:    t.getFullURL(),
-				StatusCode: response.StatusCode,
-				Status:     http.StatusText(response.StatusCode),
-				Header:     response.Header,
-				Body:       string(body),
-			}
-		*/
 		return derp.New("remote.Send", "Error in readResponseBody()", 0, err, t.ErrorReport())
 	}
 
@@ -214,14 +204,14 @@ func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
 		j, err := json.Marshal(t.BodyObject)
 
 		if err != nil {
-			return nil, derp.New("remote.getJSONReader", "Error Marshalling JSON", 0, err, t.BodyObject)
+			return nil, derp.New("remote.getJSONReader", "Error Marshalling JSON", 0, err, t.ErrorReport(), t.BodyObject)
 		}
 
 		return bytes.NewReader(j), nil
 	}
 
 	// Fall through to here means that we have an unrecognized content type.  Return an error.
-	return strings.NewReader(""), derp.New("remote.getRequestBodyReader", "Unsupported Content-Type", 0, nil, contentType)
+	return strings.NewReader(""), derp.New("remote.getRequestBodyReader", "Unsupported Content-Type", 0, nil, contentType, t.ErrorReport())
 }
 
 // readResponseBody unmarshalls the response body into the result
@@ -251,7 +241,7 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Er
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.New("netclient.Do", "Error Unmarshalling JSON Response", 0, err, string(body), result)
+			return derp.New("remote.readResponseBody", "Error Unmarshalling JSON Response", 0, err, string(body), result, t.ErrorReport())
 		}
 	}
 
