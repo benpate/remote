@@ -39,7 +39,7 @@ func Debug() Middleware {
 				fmt.Println("- ", i, ": ", r.Header.Get(i))
 			}
 
-			fmt.Println("Body: ", string(body))
+			fmt.Println("Body: ", string(*body))
 			fmt.Println("")
 
 			return nil
