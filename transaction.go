@@ -27,12 +27,6 @@ type Transaction struct {
 	Middleware    []Middleware      // Middleware to execute on the request/response
 }
 
-// Query sets a name/value pair in the URL query string.
-func (t *Transaction) Query(name string, value string) *Transaction {
-	t.QueryString.Set(name, value)
-	return t
-}
-
 // Header sets a designated header value in the HTTP request.
 func (t *Transaction) Header(name string, value string) *Transaction {
 	t.HeaderValues[name] = value
@@ -42,6 +36,18 @@ func (t *Transaction) Header(name string, value string) *Transaction {
 // ContentType sets the Content-Type header of the HTTP request.
 func (t *Transaction) ContentType(value string) *Transaction {
 	return t.Header(ContentType, value)
+}
+
+// Query sets a name/value pair in the URL query string.
+func (t *Transaction) Query(name string, value string) *Transaction {
+	t.QueryString.Set(name, value)
+	return t
+}
+
+// Form adds a name/value pair to the form data to be sent to the remote server.
+func (t *Transaction) Form(name string, value string) *Transaction {
+	t.FormData.Set(name, value)
+	return t.ContentType(ContentTypeForm)
 }
 
 // Body sets the request body, to be encoded as plain text
@@ -60,12 +66,6 @@ func (t *Transaction) JSON(value interface{}) *Transaction {
 func (t *Transaction) XML(value interface{}) *Transaction {
 	t.BodyObject = value
 	return t.ContentType(ContentTypeXML)
-}
-
-// Form adds a name/value pair to the form data to be sent to the remote server.
-func (t *Transaction) Form(name string, value string) *Transaction {
-	t.FormData.Set(name, value)
-	return t.ContentType(ContentTypeForm)
 }
 
 // Use lets you add middleware to the transaction. Middleware is able to modify
