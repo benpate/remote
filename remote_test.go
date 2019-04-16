@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -101,12 +100,11 @@ func TestPost(t *testing.T) {
 	failure := map[string]interface{}{}
 
 	if err := Post(ts.URL).JSON(body).Response(&success, &failure).Send(); err != nil {
-		t.Log(spew.Sdump(err))
-		t.Log(spew.Sdump(failure))
+		t.Log(err)
+		t.Log(failure)
 		return
 	}
 
-	// t.Log(spew.Sdump(success))
 	assert.Equal(t, success["first"], "1")
 	assert.Equal(t, success["second"], "2")
 	assert.Equal(t, success["third"], "3")
