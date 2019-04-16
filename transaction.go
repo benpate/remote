@@ -100,7 +100,7 @@ func (t *Transaction) Send() *derp.Error {
 		bodyReader, err = t.getRequestBody()
 
 		if err != nil {
-			return derp.New("remote.Result", "Error Creating Request Body", err, 0, nil)
+			return derp.New("remote.Result", "Error Creating Request Body", 0, err)
 		}
 	}
 
@@ -108,7 +108,7 @@ func (t *Transaction) Send() *derp.Error {
 	httpRequest, errr := http.NewRequest(t.Method, t.getURL(), bodyReader)
 
 	if errr != nil {
-		return derp.New("remote.Result", "Error creating HTTP request", err, 0, t.getErrorReport())
+		return derp.New("remote.Result", "Error creating HTTP request", 0, err, t.getErrorReport())
 	}
 
 	// Add headers to httpRequest
@@ -125,14 +125,14 @@ func (t *Transaction) Send() *derp.Error {
 	response, errr := t.Client.Do(httpRequest)
 
 	if errr != nil {
-		return derp.New("remote.Result", "Error executing HTTP request", errr, response.StatusCode, t.getErrorReport())
+		return derp.New("remote.Result", "Error executing HTTP request", response.StatusCode, errr, t.getErrorReport())
 	}
 
 	// Packing into response
 	body, errr := ioutil.ReadAll(response.Body)
 
 	if errr != nil {
-		return derp.New("remote.Send", "Error Reading Response Body", errr, 0, t.getErrorReport(), response)
+		return derp.New("remote.Send", "Error Reading Response Body", 0, errr, t.getErrorReport(), response)
 	}
 
 	// Execute middleware.Response
@@ -156,11 +156,11 @@ func (t *Transaction) Send() *derp.Error {
 		// If we ALSO have an error object, then try to process the response body into that
 		if t.FailureObject != nil {
 			if e := t.readResponseBody(body, t.FailureObject); e != nil {
-				return derp.New("remote.Send", "Error Parsing Error Body", e, 0, body)
+				return derp.New("remote.Send", "Error Parsing Error Body", 0, e, body)
 			}
 		}
 
-		return derp.New("netclient.Do", "Error Result from Remote Service", nil, response.StatusCode, t.getErrorReport())
+		return derp.New("netclient.Do", "Error Result from Remote Service", response.StatusCode, nil, t.getErrorReport())
 	}
 
 	// Fall through to here means that this is a successful response.
@@ -176,7 +176,7 @@ func (t *Transaction) Send() *derp.Error {
 				Body:       string(body),
 			}
 		*/
-		return derp.New("remote.Send", "Error in readResponseBody()", err, 0, t.getErrorReport())
+		return derp.New("remote.Send", "Error in readResponseBody()", 0, err, t.getErrorReport())
 	}
 
 	// Silence means success.
@@ -221,14 +221,14 @@ func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
 		j, err := json.Marshal(t.BodyObject)
 
 		if err != nil {
-			return nil, derp.New("remote.getJSONReader", "Error Marshalling JSON", err, 0, t.BodyObject)
+			return nil, derp.New("remote.getJSONReader", "Error Marshalling JSON", 0, err, t.BodyObject)
 		}
 
 		return bytes.NewReader(j), nil
 	}
 
 	// Fall through to here means that we have an unrecognized content type.  Return an error.
-	return strings.NewReader(""), derp.New("remote.getRequestBodyReader", "Unsupported Content-Type", nil, 0, contentType)
+	return strings.NewReader(""), derp.New("remote.getRequestBodyReader", "Unsupported Content-Type", 0, nil, contentType)
 }
 
 // readResponseBody unmarshalls the response body into the result
@@ -258,7 +258,7 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Er
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.New("netclient.Do", "Error Unmarshalling JSON Response", err, 0, string(body), result)
+			return derp.New("netclient.Do", "Error Unmarshalling JSON Response", 0, err, string(body), result)
 		}
 	}
 
