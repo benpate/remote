@@ -15,16 +15,18 @@ import (
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
-	Client        *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
-	Method        string            // HTTP method to use when sending the request
-	URLValue      string            // URL of the remote server to call
-	HeaderValues  map[string]string // HTTP Header values to send in the request
-	QueryString   url.Values        // Query String to append to the URL
-	FormData      url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
-	BodyObject    interface{}       // Other data to send in the body.  Encoding determined by header["Content-Type"]
-	SuccessObject interface{}       // Object to parse the response into -- IF the status code is successful
-	FailureObject interface{}       // Object to parse the response into -- IF the status code is NOT successful
-	Middleware    []Middleware      // Middleware to execute on the request/response
+	Client         *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
+	Method         string            // HTTP method to use when sending the request
+	URLValue       string            // URL of the remote server to call
+	HeaderValues   map[string]string // HTTP Header values to send in the request
+	QueryString    url.Values        // Query String to append to the URL
+	FormData       url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
+	BodyObject     interface{}       // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	SuccessObject  interface{}       // Object to parse the response into -- IF the status code is successful
+	FailureObject  interface{}       // Object to parse the response into -- IF the status code is NOT successful
+	Middleware     []Middleware      // Middleware to execute on the request/response
+	RequestObject  *http.Request     // HTTP request that is delivered to the remote server
+	ResponseObject *http.Response    // HTTP response that is returned from the remote server
 }
 
 // Header sets a designated header value in the HTTP request.
@@ -86,6 +88,7 @@ func (t *Transaction) Response(success interface{}, failure interface{}) *Transa
 func (t *Transaction) Send() *derp.Error {
 
 	var err *derp.Error
+	var errr error
 	var bodyReader io.Reader
 
 	// Execute middleware.Config
@@ -105,53 +108,43 @@ func (t *Transaction) Send() *derp.Error {
 	}
 
 	// Create the HTTP client request
-	httpRequest, errr := http.NewRequest(t.Method, t.getURL(), bodyReader)
+	t.RequestObject, errr = http.NewRequest(t.Method, t.getURL(), bodyReader)
 
 	if errr != nil {
-		return derp.New("remote.Result", "Error creating HTTP request", 0, err, t.getErrorReport())
+		return derp.New("remote.Result", "Error creating HTTP request", 0, err, t.ErrorReport())
 	}
 
 	// Add headers to httpRequest
 	for key, value := range t.HeaderValues {
-		httpRequest.Header.Add(key, value)
+		t.RequestObject.Header.Add(key, value)
 	}
 
 	// Execute middleware.Request
-	if err := t.doMiddlewareRequest(httpRequest); err != nil {
+	if err := t.doMiddlewareRequest(t.RequestObject); err != nil {
 		return err
 	}
 
 	// Executing request using HTTP client
-	response, errr := t.Client.Do(httpRequest)
+	t.ResponseObject, errr = t.Client.Do(t.RequestObject)
 
 	if errr != nil {
-		return derp.New("remote.Result", "Error executing HTTP request", response.StatusCode, errr, t.getErrorReport())
+		return derp.New("remote.Result", "Error executing HTTP request", t.ResponseObject.StatusCode, errr, t.ErrorReport())
 	}
 
-	// Packing into response
-	body, errr := ioutil.ReadAll(response.Body)
+	// Packing into t.ResponseObject
+	body, errr := ioutil.ReadAll(t.ResponseObject.Body)
 
 	if errr != nil {
-		return derp.New("remote.Send", "Error Reading Response Body", 0, errr, t.getErrorReport(), response)
+		return derp.New("remote.Send", "Error Reading Response Body", 0, errr, t.ErrorReport(), t.ResponseObject)
 	}
 
 	// Execute middleware.Response
-	if err := t.doMiddlewareResponse(response, &body); err != nil {
+	if err := t.doMiddlewareResponse(t.ResponseObject, &body); err != nil {
 		return err
 	}
 
 	// If Response Code is NOT "OK", then handle the error
-	if (response.StatusCode < 200) || (response.StatusCode > 299) {
-
-		/*
-			errorReport := HTTPErrorReport{
-				Request:    t.getFullURL(),
-				StatusCode: response.StatusCode,
-				Status:     http.StatusText(response.StatusCode),
-				Header:     response.Header,
-				Body:       string(body),
-			}
-		*/
+	if (t.ResponseObject.StatusCode < 200) || (t.ResponseObject.StatusCode > 299) {
 
 		// If we ALSO have an error object, then try to process the response body into that
 		if t.FailureObject != nil {
@@ -160,7 +153,7 @@ func (t *Transaction) Send() *derp.Error {
 			}
 		}
 
-		return derp.New("netclient.Do", "Error Result from Remote Service", response.StatusCode, nil, t.getErrorReport())
+		return derp.New("netclient.Do", "Error Result from Remote Service", t.ResponseObject.StatusCode, nil, t.ErrorReport())
 	}
 
 	// Fall through to here means that this is a successful response.
@@ -176,7 +169,7 @@ func (t *Transaction) Send() *derp.Error {
 				Body:       string(body),
 			}
 		*/
-		return derp.New("remote.Send", "Error in readResponseBody()", 0, err, t.getErrorReport())
+		return derp.New("remote.Send", "Error in readResponseBody()", 0, err, t.ErrorReport())
 	}
 
 	// Silence means success.
@@ -265,7 +258,21 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Er
 	return nil
 }
 
-//TODO: finish error reporting.
-func (t *Transaction) getErrorReport() ErrorReport {
-	return ErrorReport{}
+// ErrorReport generates a data dump of the current state of the HTTP transaction.
+// This is used when reporting errors via derp, to provide insights into what went wrong.
+func (t *Transaction) ErrorReport() ErrorReport {
+
+	result := ErrorReport{}
+
+	result.URL = t.getURL()
+	result.Request.Method = t.Method
+	result.Request.Header = t.HeaderValues
+
+	if t.ResponseObject != nil {
+		result.Response.StatusCode = t.ResponseObject.StatusCode
+		result.Response.Status = t.ResponseObject.Status
+		result.Response.Header = t.ResponseObject.Header
+	}
+
+	return result
 }

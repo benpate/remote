@@ -33,7 +33,7 @@ func TestMiddlewareError(t *testing.T) {
 	server := echoBodyServer()
 
 	// We're EXPECTING an error, so if there's no error, then that's BAD.
-	if err := Get(server.URL).Use(middleware).Send(); err == nil {
+	if err := Get(server.URL).Use(middleware); err == nil {
 		t.Fail()
 	}
 }
