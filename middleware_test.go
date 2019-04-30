@@ -29,21 +29,21 @@ func TestMiddlewareErrors(t *testing.T) {
 	// Create a simple middleware to write the transaction to stdout
 	configError := Middleware{
 		Config: func(transaction *Transaction) *derp.Error {
-			return derp.New("Middleware.Config", "Error Running Middleware", 0, nil)
+			return derp.New(500, "Middleware.Config", "Error Running Middleware")
 		},
 	}
 
 	// Create a simple middleware to write the transaction to stdout
 	requestError := Middleware{
 		Request: func(request *http.Request) *derp.Error {
-			return derp.New("Middleware.Request", "Error Running Middleware", 0, nil)
+			return derp.New(500, "Middleware.Request", "Error Running Middleware")
 		},
 	}
 
 	// Create a simple middleware to write the transaction to stdout
 	responseError := Middleware{
 		Response: func(response *http.Response, body *[]byte) *derp.Error {
-			return derp.New("Middleware.Response", "Error Running Middleware", 0, nil)
+			return derp.New(500, "Middleware.Response", "Error Running Middleware")
 		},
 	}
 
