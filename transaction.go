@@ -128,7 +128,7 @@ func (t *Transaction) Send() *derp.Error {
 	t.ResponseObject, errr = t.Client.Do(t.RequestObject)
 
 	if errr != nil {
-		return derp.New(t.ResponseObject.StatusCode, "remote.Result", "Error executing HTTP request", errr, t.ErrorReport())
+		return derp.New(derp.CodeInternalError, "remote.Result", "Error executing HTTP request", errr, t.ErrorReport())
 	}
 
 	// Packing into t.ResponseObject
