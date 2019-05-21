@@ -4,6 +4,7 @@ package remote
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -217,34 +218,62 @@ func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
 // readResponseBody unmarshalls the response body into the result
 func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Error {
 
-	// TODO: inspect MIME Type and use the appropriate decoder.
+	// If we don't actually have a result (common for error documents) then there's nothing to do.
+	if result == nil {
+		return nil
+	}
 
-	// If we have defined a result variable, then try to unmarshal the results
-	// into it.
-	if result != nil {
+	contentType := t.ResponseObject.Header.Get(ContentType) // Get the content type from the header
+	contentType = strings.Split(contentType, ";")[0]        // Strip out suffixes, such as "; charset=utf-8"
 
-		// If result is a pointer to a string (or slice of bytes) then just populate
-		// the response directly into the result
-		switch result.(type) {
+	switch contentType {
 
-		case *[]byte, []byte:
-			result = body
+	case ContentTypePlain:
+
+		// Try to read plain text straight into the result variable, depending on the format of the result variable.
+		switch result := result.(type) {
+
+		case io.ReadWriter:
+			result.Write(body)
 			return nil
 
-		case *string, string:
-			result = string(body)
+		case *[]byte:
+			*result = body
 			return nil
+
+		case *string:
+			*result = string(body)
+			return nil
+
+		default:
+			return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Error reading response into value", result)
 		}
 
-		// Fall through to here means its a more complex data type.  Try to
-		// unmarshal based on content type
+	case ContentTypeXML, contentTypeNonStandardXMLText:
+
+		// Parse the result and return to the caller.
+		if err := xml.Unmarshal(body, result); err != nil {
+			return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
+		}
+
+		return nil
+
+	case ContentTypeJSON, contentTypeNonStandardJSONText:
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
 			return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
 		}
+
+		return nil
 	}
 
+	// Unrecognized content type.  Worst case, assume JSON and try to unmarshal
+	if err := json.Unmarshal(body, result); err != nil {
+		return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Unrecognized Content Type.  Error Unmarshalling Content as JSON", contentType, err, string(body), result, t.ErrorReport())
+	}
+
+	// Somehow, we made it.  Even though we don't have a recognized mime type, it looks like the content is JSON, so let's just take the win.
 	return nil
 }
 
