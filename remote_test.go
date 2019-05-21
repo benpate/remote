@@ -75,9 +75,9 @@ func TestPost(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, success["first"], "1")
-	assert.Equal(t, success["second"], "2")
-	assert.Equal(t, success["third"], "3")
+	assert.Equal(t, "1", success["first"])
+	assert.Equal(t, "2", success["second"])
+	assert.Equal(t, "3", success["third"])
 }
 
 func echoBodyServer() *httptest.Server {
