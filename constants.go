@@ -1,20 +1,17 @@
 // Package remote provides a simple and clean API for making HTTP requests to remote servers.
 package remote
 
-const (
+// ContentType is the string used in the HTTP header to designate a MIME type
+const ContentType = "Content-Type"
 
-	// ContentType is the string used in the HTTP header to designate a MIME type
-	ContentType = "Content-Type"
+// ContentTypePlain is the default plaintext MIME type
+const ContentTypePlain = "text/plain"
 
-	// ContentTypePlain is the default plaintext MIME type
-	ContentTypePlain = "text/plain"
+// ContentTypeJSON is the standard MIME Type for JSON content
+const ContentTypeJSON = "application/json"
 
-	// ContentTypeJSON is the standard MIME Type for JSON content
-	ContentTypeJSON = "application/json"
+// ContentTypeForm is the standard MIME Type for Form encoded content
+const ContentTypeForm = "application/x-www-form-urlencoded"
 
-	// ContentTypeForm is the standard MIME Type for Form encoded content
-	ContentTypeForm = "application/x-www-form-urlencoded"
-
-	// ContentTypeXML is the standard MIME Type for XML content
-	ContentTypeXML = "application/xml"
-)
+// ContentTypeXML is the standard MIME Type for XML content
+const ContentTypeXML = "application/xml"
