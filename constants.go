@@ -7,6 +7,9 @@ const ContentType = "Content-Type"
 // ContentTypePlain is the default plaintext MIME type
 const ContentTypePlain = "text/plain"
 
+// ContentTypeHTML is the standard MIME type for HTML content
+const ContentTypeHTML = "text/html"
+
 // ContentTypeJSON is the standard MIME Type for JSON content
 const ContentTypeJSON = "application/json"
 

@@ -228,7 +228,7 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Er
 
 	switch contentType {
 
-	case ContentTypePlain:
+	case ContentTypePlain, ContentTypeHTML:
 
 		// Try to read plain text straight into the result variable, depending on the format of the result variable.
 		switch result := result.(type) {
