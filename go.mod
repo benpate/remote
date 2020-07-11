@@ -1,6 +1,6 @@
 module github.com/benpate/remote
 
-go 1.12
+go 1.14
 
 require (
 	github.com/benpate/derp v0.11.0
