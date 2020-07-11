@@ -14,7 +14,7 @@ func Debug() remote.Middleware {
 
 	return remote.Middleware{
 
-		Request: func(r *http.Request) *derp.Error {
+		Request: func(r *http.Request) error {
 
 			fmt.Println("")
 			fmt.Println("HTTP Request")
@@ -26,7 +26,7 @@ func Debug() remote.Middleware {
 			return nil
 		},
 
-		Response: func(r *http.Response, body *[]byte) *derp.Error {
+		Response: func(r *http.Response, body *[]byte) error {
 
 			fmt.Println("")
 			fmt.Println("HTTP Response")

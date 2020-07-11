@@ -17,7 +17,7 @@ func Opaque(opaqueValue string) remote.Middleware {
 	return remote.Middleware{
 
 		// This is executed on every Request before its sent to the server
-		Request: func(r *http.Request) *derp.Error {
+		Request: func(r *http.Request) error {
 			r.URL.Opaque = opaqueValue
 			return nil
 		},
