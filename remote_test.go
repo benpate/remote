@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/benpate/derp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +47,7 @@ func TestGet(t *testing.T) {
 
 	// Get data from a remote server
 	if err := transaction.Send(); err != nil {
-		err.Report()
+		derp.Report(err)
 		t.Fail()
 	}
 

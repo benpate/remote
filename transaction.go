@@ -86,9 +86,9 @@ func (t *Transaction) Response(success interface{}, failure interface{}) *Transa
 }
 
 // Send executes the transaction, sending the request to the remote server.
-func (t *Transaction) Send() *derp.Error {
+func (t *Transaction) Send() error {
 
-	var err *derp.Error
+	var err error
 	var errr error
 	var bodyReader io.Reader
 
@@ -177,7 +177,7 @@ func (t *Transaction) getURL() string {
 	return result
 }
 
-func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
+func (t *Transaction) getRequestBody() (io.Reader, error) {
 
 	// If we already have a reader for the Body, then just return that.
 	switch t.BodyObject.(type) {
@@ -216,7 +216,7 @@ func (t *Transaction) getRequestBody() (io.Reader, *derp.Error) {
 }
 
 // readResponseBody unmarshalls the response body into the result
-func (t *Transaction) readResponseBody(body []byte, result interface{}) *derp.Error {
+func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
 
 	// If we don't actually have a result (common for error documents) then there's nothing to do.
 	if result == nil {

@@ -3,7 +3,6 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/benpate/derp"
 	"github.com/benpate/remote"
 )
 

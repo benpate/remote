@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/benpate/derp"
 	"github.com/benpate/remote"
 )
 

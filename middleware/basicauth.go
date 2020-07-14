@@ -3,7 +3,6 @@ package middleware
 import (
 	"encoding/base64"
 
-	"github.com/benpate/derp"
 	"github.com/benpate/remote"
 )
 
@@ -11,7 +10,7 @@ import (
 func BasicAuth(username, password string) remote.Middleware {
 	return remote.Middleware{
 
-		Config: func(transaction *remote.Transaction) *derp.Error {
+		Config: func(transaction *remote.Transaction) error {
 			transaction.Header("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+password)))
 			return nil
 		},
