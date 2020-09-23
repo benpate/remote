@@ -5,6 +5,8 @@ github.com/benpate/derp v0.9.4/go.mod h1:uk1EoSDvBEkBIOw4J/qeLga2kUCvKukIFFk3YE7
 github.com/benpate/derp v0.10.0/go.mod h1:uk1EoSDvBEkBIOw4J/qeLga2kUCvKukIFFk3YE7Zjtk=
 github.com/benpate/derp v0.12.1 h1:l5yHu/dS9OJ6KBKGtpfG79tYsjCQvrQKA9uA5Kl71SM=
 github.com/benpate/derp v0.12.1/go.mod h1:tIAHPj44uS865TVCgkbFzm26nVawvKSVwWRPu+R3wUs=
+github.com/benpate/derp v0.18.0 h1:u6DH1xgwuEmjtVo5wZGep1SaOpIEchCKrO8rRuNK7Xo=
+github.com/benpate/derp v0.18.0/go.mod h1:Zne8hUcv/ljV0xIDe58OIbcSSEl7Ckm81oWZ5NCozz0=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
