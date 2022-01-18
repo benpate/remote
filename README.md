@@ -6,7 +6,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/benpate/remote?style=flat-square)](https://goreportcard.com/report/github.com/benpate/remote)
 ![Version](https://img.shields.io/github/v/release/benpate/remote?include_prereleases&style=flat-square&color=brightgreen)
 
-## Crazy Simple, Chainable HTTP Client for Go.
+## Crazy Simple, Chainable HTTP Client for Go
 
 Remote is a paper-thin wrapper on top of Go's HTTP library, that gives you sensible defaults, a pretty API with some modern conveniences, and full control of your HTTP requests.  It's the fastest and easiest way to make an HTTP call using Go.
 
