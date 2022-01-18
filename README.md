@@ -1,10 +1,10 @@
 # REMOTE 🏝
 
-[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/benpate/remote)
-[![Build Status](http://img.shields.io/travis/benpate/remote.svg?style=flat-square)](https://travis-ci.org/benpate/remote)
+[![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://pkg.go.dev/github.com/benpate/remote)
+[![Build Status](https://img.shields.io/github/workflow/status/benpate/remote/Go/master)](https://github.com/benpate/remote/actions/workflows/go.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/benpate/remote.svg?style=flat-square)](https://codecov.io/gh/benpate/remote)
 [![Go Report Card](https://goreportcard.com/badge/github.com/benpate/remote?style=flat-square)](https://goreportcard.com/report/github.com/benpate/remote)
-![Version](https://img.shields.io/github/v/release/benpate/remote?include_prereleases&style=flat-square&color=brightgreen)
+[![Version](https://img.shields.io/github/v/release/benpate/remote?include_prereleases&style=flat-square&color=brightgreen)](https://github.com/benpate/remote/releases)
 
 ## Crazy Simple, Chainable HTTP Client for Go
 
