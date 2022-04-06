@@ -104,7 +104,7 @@ func (t *Transaction) Send() error {
 		bodyReader, err = t.getRequestBody()
 
 		if err != nil {
-			return derp.New(derp.CodeInternalError, "remote.Result", "Error Creating Request Body", err, t.ErrorReport())
+			return derp.NewInternalError("remote.Result", "Error Creating Request Body", err, t.ErrorReport())
 		}
 	}
 
@@ -112,7 +112,7 @@ func (t *Transaction) Send() error {
 	t.RequestObject, errr = http.NewRequest(t.Method, t.getURL(), bodyReader)
 
 	if errr != nil {
-		return derp.New(derp.CodeInternalError, "remote.Result", "Error creating HTTP request", err, t.ErrorReport())
+		return derp.NewInternalError("remote.Result", "Error creating HTTP request", err, t.ErrorReport())
 	}
 
 	// Add headers to httpRequest
@@ -129,7 +129,7 @@ func (t *Transaction) Send() error {
 	t.ResponseObject, errr = t.Client.Do(t.RequestObject)
 
 	if errr != nil {
-		return derp.New(derp.CodeInternalError, "remote.Result", "Error executing HTTP request", errr, t.ErrorReport())
+		return derp.NewInternalError("remote.Result", "Error executing HTTP request", errr, t.ErrorReport())
 	}
 
 	// Packing into t.ResponseObject
@@ -150,7 +150,7 @@ func (t *Transaction) Send() error {
 		// If we ALSO have an error object, then try to process the response body into that
 		if t.FailureObject != nil {
 			if er := t.readResponseBody(body, t.FailureObject); er != nil {
-				return derp.New(derp.CodeInternalError, "remote.Send", "Error Parsing Error Body", er, body)
+				return derp.NewInternalError("remote.Send", "Error Parsing Error Body", er, body)
 			}
 		}
 
@@ -160,7 +160,7 @@ func (t *Transaction) Send() error {
 	// Fall through to here means that this is a successful response.
 	// Try to read the response body
 	if err := t.readResponseBody(body, t.SuccessObject); err != nil {
-		return derp.New(derp.CodeInternalError, "remote.Send", "Error in readResponseBody()", err, t.ErrorReport())
+		return derp.NewInternalError("remote.Send", "Error in readResponseBody()", err, t.ErrorReport())
 	}
 
 	// Silence means success.
@@ -205,14 +205,14 @@ func (t *Transaction) getRequestBody() (io.Reader, error) {
 		j, err := json.Marshal(t.BodyObject)
 
 		if err != nil {
-			return nil, derp.New(derp.CodeInternalError, "remote.getJSONReader", "Error Marshalling JSON", err, t.ErrorReport(), t.BodyObject)
+			return nil, derp.NewInternalError("remote.getJSONReader", "Error Marshalling JSON", err, t.ErrorReport(), t.BodyObject)
 		}
 
 		return bytes.NewReader(j), nil
 	}
 
 	// Fall through to here means that we have an unrecognized content type.  Return an error.
-	return strings.NewReader(""), derp.New(derp.CodeInternalError, "remote.getRequestBodyReader", "Unsupported Content-Type", contentType, t.ErrorReport())
+	return strings.NewReader(""), derp.NewInternalError("remote.getRequestBodyReader", "Unsupported Content-Type", contentType, t.ErrorReport())
 }
 
 // readResponseBody unmarshalls the response body into the result
@@ -246,14 +246,14 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
 			return nil
 
 		default:
-			return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Error reading response into value", result)
+			return derp.NewInternalError("remote.readResponseBody", "Error reading response into value", result)
 		}
 
 	case ContentTypeXML, contentTypeNonStandardXMLText:
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
+			return derp.NewInternalError("remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
 		}
 
 		return nil
@@ -262,7 +262,7 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
+			return derp.NewInternalError("remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
 		}
 
 		return nil
@@ -270,7 +270,7 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
 
 	// Unrecognized content type.  Worst case, assume JSON and try to unmarshal
 	if err := json.Unmarshal(body, result); err != nil {
-		return derp.New(derp.CodeInternalError, "remote.readResponseBody", "Unrecognized Content Type.  Error Unmarshalling Content as JSON", contentType, err, string(body), result, t.ErrorReport())
+		return derp.NewInternalError("remote.readResponseBody", "Unrecognized Content Type.  Error Unmarshalling Content as JSON", contentType, err, string(body), result, t.ErrorReport())
 	}
 
 	// Somehow, we made it.  Even though we don't have a recognized mime type, it looks like the content is JSON, so let's just take the win.
