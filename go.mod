@@ -3,8 +3,8 @@ module github.com/benpate/remote
 go 1.18
 
 require (
-	github.com/benpate/derp v0.22.2
-	github.com/stretchr/testify v1.7.2
+	github.com/benpate/derp v0.23.0
+	github.com/stretchr/testify v1.7.4
 )
 
 require (
