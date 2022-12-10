@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -133,7 +132,7 @@ func (t *Transaction) Send() error {
 	}
 
 	// Packing into t.ResponseObject
-	body, errr := ioutil.ReadAll(t.ResponseObject.Body)
+	body, errr := io.ReadAll(t.ResponseObject.Body)
 
 	if errr != nil {
 		return derp.New(t.ResponseObject.StatusCode, "remote.Send", "Error Reading Response Body", errr, t.ErrorReport(), t.ResponseObject)
@@ -223,37 +222,36 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
 		return nil
 	}
 
+	// If we have a reader/string/byte array, then just read the body straight into it.
+	switch result := result.(type) {
+
+	case io.Writer:
+		result.Write(body)
+		return nil
+
+	case *[]byte:
+		*result = body
+		return nil
+
+	case *string:
+		*result = string(body)
+		return nil
+	}
+
+	// Otherwise, try to use the content type to pick an unmarshaller
 	contentType := t.ResponseObject.Header.Get(ContentType) // Get the content type from the header
 	contentType = strings.Split(contentType, ";")[0]        // Strip out suffixes, such as "; charset=utf-8"
 
 	switch contentType {
 
 	case ContentTypePlain, ContentTypeHTML:
-
-		// Try to read plain text straight into the result variable, depending on the format of the result variable.
-		switch result := result.(type) {
-
-		case io.ReadWriter:
-			result.Write(body)
-			return nil
-
-		case *[]byte:
-			*result = body
-			return nil
-
-		case *string:
-			*result = string(body)
-			return nil
-
-		default:
-			return derp.NewInternalError("remote.readResponseBody", "Error reading response into value", result)
-		}
+		return derp.NewInternalError("remote.readResponseBody", "HTML must be read into an io.Writer, *string, or *byte[]", result)
 
 	case ContentTypeXML, contentTypeNonStandardXMLText:
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.NewInternalError("remote.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.ErrorReport())
+			return derp.NewInternalError("remote.readResponseBody", "Error Unmarshalling XML Response", err, string(body), result, t.ErrorReport())
 		}
 
 		return nil
@@ -268,13 +266,8 @@ func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
 		return nil
 	}
 
-	// Unrecognized content type.  Worst case, assume JSON and try to unmarshal
-	if err := json.Unmarshal(body, result); err != nil {
-		return derp.NewInternalError("remote.readResponseBody", "Unrecognized Content Type.  Error Unmarshalling Content as JSON", contentType, err, string(body), result, t.ErrorReport())
-	}
-
-	// Somehow, we made it.  Even though we don't have a recognized mime type, it looks like the content is JSON, so let's just take the win.
-	return nil
+	// If we're here, it means we don't know how to unmarshal the response body.
+	return derp.NewInternalError("remote.readResponseBody", "Unsupported Content-Type", contentType, t.ErrorReport())
 }
 
 // ErrorReport generates a data dump of the current state of the HTTP transaction.
