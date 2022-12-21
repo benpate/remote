@@ -21,9 +21,9 @@ type Transaction struct {
 	HeaderValues   map[string]string // HTTP Header values to send in the request
 	QueryString    url.Values        // Query String to append to the URL
 	FormData       url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
-	BodyObject     interface{}       // Other data to send in the body.  Encoding determined by header["Content-Type"]
-	SuccessObject  interface{}       // Object to parse the response into -- IF the status code is successful
-	FailureObject  interface{}       // Object to parse the response into -- IF the status code is NOT successful
+	BodyObject     any               // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	SuccessObject  any               // Object to parse the response into -- IF the status code is successful
+	FailureObject  any               // Object to parse the response into -- IF the status code is NOT successful
 	Middleware     []Middleware      // Middleware to execute on the request/response
 	RequestObject  *http.Request     // HTTP request that is delivered to the remote server
 	ResponseObject *http.Response    // HTTP response that is returned from the remote server
@@ -59,13 +59,13 @@ func (t *Transaction) Body(value string) *Transaction {
 }
 
 // JSON sets the request body, to be encoded as JSON.
-func (t *Transaction) JSON(value interface{}) *Transaction {
+func (t *Transaction) JSON(value any) *Transaction {
 	t.BodyObject = value
 	return t.ContentType(ContentTypeJSON)
 }
 
 // XML sets the request body, to be encoded as XML.
-func (t *Transaction) XML(value interface{}) *Transaction {
+func (t *Transaction) XML(value any) *Transaction {
 	t.BodyObject = value
 	return t.ContentType(ContentTypeXML)
 }
@@ -78,7 +78,7 @@ func (t *Transaction) Use(middleware ...Middleware) *Transaction {
 }
 
 // Response sets the objects for parsing HTTP success and failure responses
-func (t *Transaction) Response(success interface{}, failure interface{}) *Transaction {
+func (t *Transaction) Response(success any, failure any) *Transaction {
 	t.SuccessObject = success
 	t.FailureObject = failure
 	return t
@@ -215,7 +215,7 @@ func (t *Transaction) getRequestBody() (io.Reader, error) {
 }
 
 // readResponseBody unmarshalls the response body into the result
-func (t *Transaction) readResponseBody(body []byte, result interface{}) error {
+func (t *Transaction) readResponseBody(body []byte, result any) error {
 
 	// If we don't actually have a result (common for error documents) then there's nothing to do.
 	if result == nil {

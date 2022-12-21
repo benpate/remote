@@ -67,8 +67,8 @@ func TestPost(t *testing.T) {
 		"third":  "3",
 	}
 
-	success := map[string]interface{}{}
-	failure := map[string]interface{}{}
+	success := map[string]any{}
+	failure := map[string]any{}
 
 	if err := Post(ts.URL).JSON(body).Response(&success, &failure).Send(); err != nil {
 		t.Log(err)
