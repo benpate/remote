@@ -1,8 +1,14 @@
 // Package remote provides a simple and clean API for making HTTP requests to remote servers.
 package remote
 
+// Accept is the string used in the HTTP header to request a response be encoded as a MIME type
+const Accept = "Accept"
+
 // ContentType is the string used in the HTTP header to designate a MIME type
 const ContentType = "Content-Type"
+
+// ContentTypeActivityPub is the standard MIME type for ActivityPub content
+const ContentTypeActivityPub = "application/activity+json"
 
 // ContentTypePlain is the default plaintext MIME type
 const ContentTypePlain = "text/plain"
@@ -12,6 +18,9 @@ const ContentTypeHTML = "text/html"
 
 // ContentTypeJSON is the standard MIME Type for JSON content
 const ContentTypeJSON = "application/json"
+
+// ContentTypeJSONFeed is the standard MIME Type for JSON Feed content
+const ContentTypeJSONFeed = "application/feed+json"
 
 // ContentTypeForm is the standard MIME Type for Form encoded content
 const ContentTypeForm = "application/x-www-form-urlencoded"
