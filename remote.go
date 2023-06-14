@@ -18,8 +18,6 @@ func newTransaction(method string, urlValue string) *Transaction {
 		Middleware:   []Middleware{},
 	}
 
-	t.ContentType(ContentTypePlain)
-
 	return t
 }
 

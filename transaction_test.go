@@ -3,7 +3,7 @@ package remote
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHeader(t *testing.T) {
@@ -13,8 +13,8 @@ func TestHeader(t *testing.T) {
 	tx.Header("name1", "value1")
 	tx.Header("name2", "value2")
 
-	assert.Equal(t, "value1", tx.HeaderValues["name1"])
-	assert.Equal(t, "value2", tx.HeaderValues["name2"])
+	require.Equal(t, "value1", tx.HeaderValues["name1"])
+	require.Equal(t, "value2", tx.HeaderValues["name2"])
 }
 
 func TestContentType(t *testing.T) {
@@ -22,13 +22,13 @@ func TestContentType(t *testing.T) {
 	tx := Get("http://example.com")
 
 	tx.ContentType("text/plain")
-	assert.Equal(t, "text/plain", tx.HeaderValues["Content-Type"])
+	require.Equal(t, "text/plain", tx.HeaderValues["Content-Type"])
 
 	tx.ContentType("application/json")
-	assert.Equal(t, "application/json", tx.HeaderValues["Content-Type"])
+	require.Equal(t, "application/json", tx.HeaderValues["Content-Type"])
 
 	tx.ContentType("tex/html")
-	assert.Equal(t, "tex/html", tx.HeaderValues["Content-Type"])
+	require.Equal(t, "tex/html", tx.HeaderValues["Content-Type"])
 }
 
 func TestQuery(t *testing.T) {
@@ -38,8 +38,8 @@ func TestQuery(t *testing.T) {
 	tx.Query("name1", "value1")
 	tx.Query("name2", "value2")
 
-	assert.Equal(t, "value1", tx.QueryString.Get("name1"))
-	assert.Equal(t, "value2", tx.QueryString.Get("name2"))
+	require.Equal(t, "value1", tx.QueryString.Get("name1"))
+	require.Equal(t, "value2", tx.QueryString.Get("name2"))
 }
 
 func TestForm(t *testing.T) {
@@ -49,26 +49,39 @@ func TestForm(t *testing.T) {
 	tx.Form("name1", "value1")
 	tx.Form("name2", "value2")
 
-	assert.Equal(t, "value1", tx.FormData.Get("name1"))
-	assert.Equal(t, "value2", tx.FormData.Get("name2"))
+	require.Equal(t, "value1", tx.FormData.Get("name1"))
+	require.Equal(t, "value2", tx.FormData.Get("name2"))
 }
 
-func TestBody(t *testing.T) {
+func TestBody_Text(t *testing.T) {
+
+	tx := Get("http://example.com")
+
+	tx.Body("Test Value")
+	require.Equal(t, "Test Value", tx.BodyObject)
+	require.Equal(t, "text/plain", tx.HeaderValues["Content-Type"])
+
+}
+
+func TestBody_JSON(t *testing.T) {
 
 	tx := Get("http://example.com")
 
 	complex1 := []int{1, 2, 3, 4}
-	complex2 := []int{5, 6, 7, 8}
-
-	tx.Body("Test Value")
-	assert.Equal(t, "Test Value", tx.BodyObject)
-	assert.Equal(t, "text/plain", tx.HeaderValues["Content-Type"])
 
 	tx.JSON(complex1)
-	assert.Equal(t, complex1, tx.BodyObject)
-	assert.Equal(t, "application/json", tx.HeaderValues["Content-Type"])
+	require.Equal(t, complex1, tx.BodyObject)
+	require.Equal(t, "application/json", tx.HeaderValues["Content-Type"])
+
+}
+
+func TestBody_XML(t *testing.T) {
+
+	tx := Get("http://example.com")
+
+	complex2 := []int{5, 6, 7, 8}
 
 	tx.XML(complex2)
-	assert.Equal(t, complex2, tx.BodyObject)
-	assert.Equal(t, "application/xml", tx.HeaderValues["Content-Type"])
+	require.Equal(t, complex2, tx.BodyObject)
+	require.Equal(t, "application/xml", tx.HeaderValues["Content-Type"])
 }
