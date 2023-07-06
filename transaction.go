@@ -250,7 +250,9 @@ func (t *Transaction) readResponseBody(body []byte, result any) error {
 	switch result := result.(type) {
 
 	case io.Writer:
-		result.Write(body)
+		if _, err := result.Write(body); err != nil {
+			return derp.Wrap(err, "remote.Transaction.readResponseBody", "Error writing response body to io.Writer", result)
+		}
 		return nil
 
 	case *[]byte:

@@ -19,6 +19,7 @@ func TestMiddleware(t *testing.T) {
 
 	server := echoBodyServer()
 
+	// nolint:errcheck // just a test
 	Get(server.URL).Use(middleware).Send()
 }
 

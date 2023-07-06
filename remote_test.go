@@ -46,6 +46,7 @@ func TestGet(t *testing.T) {
 		Response(&users, nil)
 
 	// Get data from a remote server
+	// nolint:errcheck // just a test
 	if err := transaction.Send(); err != nil {
 		derp.Report(err)
 		t.Fail()
@@ -86,7 +87,9 @@ func echoBodyServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		body := new(bytes.Buffer)
+		// nolint:errcheck // just a test
 		body.ReadFrom(r.Body)
+		// nolint:errcheck // just a test
 		w.Write(body.Bytes())
 	}))
 }
