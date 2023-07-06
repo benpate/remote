@@ -219,7 +219,11 @@ func (t *Transaction) getRequestBody() (io.Reader, error) {
 	case ContentTypeForm:
 		return strings.NewReader(t.FormData.Encode()), nil
 
-	case ContentTypeJSON, ContentTypeJSONFeed, ContentTypeActivityPub, contentTypeNonStandardJSONText:
+	case ContentTypeJSON,
+		ContentTypeActivityPub,
+		ContentTypeJSONResourceDescriptor,
+		ContentTypeJSONFeed,
+		contentTypeNonStandardJSONText:
 
 		j, err := json.Marshal(t.BodyObject)
 
@@ -276,7 +280,12 @@ func (t *Transaction) readResponseBody(body []byte, result any) error {
 
 		return nil
 
-	case ContentTypeJSON, ContentTypeJSONFeed, ContentTypeActivityPub, contentTypeNonStandardJSONText:
+	case
+		ContentTypeJSON,
+		ContentTypeActivityPub,
+		ContentTypeJSONResourceDescriptor,
+		ContentTypeJSONFeed,
+		contentTypeNonStandardJSONText:
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {

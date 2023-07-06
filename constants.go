@@ -22,6 +22,10 @@ const ContentTypeJSON = "application/json"
 // ContentTypeJSONFeed is the standard MIME Type for JSON Feed content
 const ContentTypeJSONFeed = "application/feed+json"
 
+// ContentTypeJSONResourceDescriptor is the standard MIME Type for JSON Resource Descriptor content
+// which is used by WebFinger: https://datatracker.ietf.org/doc/html/rfc7033#section-10.2
+const ContentTypeJSONResourceDescriptor = "application/jrd+json"
+
 // ContentTypeForm is the standard MIME Type for Form encoded content
 const ContentTypeForm = "application/x-www-form-urlencoded"
 
