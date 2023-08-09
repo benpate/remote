@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/benpate/derp"
@@ -36,8 +37,26 @@ func (t *Transaction) Header(name string, value string) *Transaction {
 }
 
 // Accept sets the Content-Type header of the HTTP request.
-func (t *Transaction) Accept(value string) *Transaction {
-	return t.Header(Accept, value)
+func (t *Transaction) Accept(contentTypes ...string) *Transaction {
+
+	switch len(contentTypes) {
+	case 0:
+		return t.Header("Accept", "*/*")
+
+	case 1:
+		return t.Header("Accept", contentTypes[0])
+
+	}
+
+	// Build the Accept header with priorities
+	accept := ""
+	q := 1.0
+	for _, contentType := range contentTypes {
+		accept += contentType + ";q=" + strconv.FormatFloat(q, 'f', 1, 64) + ", "
+		q -= 0.1
+	}
+
+	return t.Header("Accept", strings.TrimRight(accept, ", "))
 }
 
 // ContentType sets the Content-Type header of the HTTP request.

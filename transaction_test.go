@@ -17,6 +17,23 @@ func TestHeader(t *testing.T) {
 	require.Equal(t, "value2", tx.HeaderValues["name2"])
 }
 
+func TestAccept(t *testing.T) {
+
+	tx := Get("http://example.com")
+
+	tx.Accept("text/plain")
+	require.Equal(t, "text/plain", tx.HeaderValues["Accept"])
+
+	tx.Accept()
+	require.Equal(t, "*/*", tx.HeaderValues["Accept"])
+
+	tx.Accept("application/json", "application/xml")
+	require.Equal(t, "application/json;q=1.0, application/xml;q=0.9", tx.HeaderValues["Accept"])
+
+	tx.Accept("application/json", "application/xml", "text/plain")
+	require.Equal(t, "application/json;q=1.0, application/xml;q=0.9, text/plain;q=0.8", tx.HeaderValues["Accept"])
+}
+
 func TestContentType(t *testing.T) {
 
 	tx := Get("http://example.com")
