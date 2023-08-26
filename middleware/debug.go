@@ -20,8 +20,13 @@ func Debug() remote.Middleware {
 			fmt.Println("-------------")
 			fmt.Println("Method: ", r.Method)
 			fmt.Println("URL: ", r.URL.String())
-			fmt.Println("")
+			fmt.Println("Headers:")
 
+			for i := range r.Header {
+				fmt.Println("- ", i, ": ", r.Header.Get(i))
+			}
+
+			fmt.Println("")
 			return nil
 		},
 
