@@ -1,8 +1,8 @@
 # REMOTE 🏝
 
 [![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://pkg.go.dev/github.com/benpate/remote)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/benpate/remote/go.yml?branch=main)](https://github.com/benpate/remote/actions/workflows/go.yml)
 [![Version](https://img.shields.io/github/v/release/benpate/remote?include_prereleases&style=flat-square&color=brightgreen)](https://github.com/benpate/remote/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/benpate/remote/go.yml?branch=main)](https://github.com/benpate/remote/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/benpate/remote?style=flat-square)](https://goreportcard.com/report/github.com/benpate/remote)
 [![Codecov](https://img.shields.io/codecov/c/github/benpate/remote.svg?style=flat-square)](https://codecov.io/gh/benpate/remote)
 
