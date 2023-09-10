@@ -223,6 +223,9 @@ func (t *Transaction) getRequestBody() (io.Reader, error) {
 	case io.Reader:
 		return t.BodyObject.(io.Reader), nil
 
+	case string:
+		return strings.NewReader(t.BodyObject.(string)), nil
+
 	case []byte:
 		return bytes.NewReader(t.BodyObject.([]byte)), nil
 	}
