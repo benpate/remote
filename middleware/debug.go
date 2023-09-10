@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/benpate/derp"
+	"github.com/benpate/re"
 	"github.com/benpate/remote"
 )
 
@@ -15,11 +17,18 @@ func Debug() remote.Middleware {
 
 		Request: func(r *http.Request) error {
 
+			body, err := re.ReadBody(r)
+
+			if err != nil {
+				return derp.Wrap(err, "remote.middleware.Debug", "Error reading body")
+			}
+
 			fmt.Println("")
 			fmt.Println("HTTP Request")
 			fmt.Println("-------------")
 			fmt.Println("Method: ", r.Method)
 			fmt.Println("URL: ", r.URL.String())
+			fmt.Println("Content-Length: " + strconv.FormatInt(r.ContentLength, 10))
 			fmt.Println("Headers:")
 
 			for i := range r.Header {
@@ -27,6 +36,9 @@ func Debug() remote.Middleware {
 			}
 
 			fmt.Println("")
+			fmt.Println(string(body))
+			fmt.Println("")
+
 			return nil
 		},
 
@@ -44,7 +56,7 @@ func Debug() remote.Middleware {
 				fmt.Println("- ", i, ": ", r.Header.Get(i))
 			}
 
-			fmt.Println("Body: ", string(*body))
+			fmt.Println(string(*body))
 			fmt.Println("")
 
 			return nil
