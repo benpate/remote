@@ -17,7 +17,7 @@ func Debug() remote.Middleware {
 
 		Request: func(r *http.Request) error {
 
-			body, err := re.ReadBody(r)
+			body, err := re.ReadRequestBody(r)
 
 			if err != nil {
 				return derp.Wrap(err, "remote.middleware.Debug", "Error reading body")
