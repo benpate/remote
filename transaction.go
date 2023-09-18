@@ -127,7 +127,6 @@ func (t *Transaction) Response(success any, failure any) *Transaction {
 func (t *Transaction) Send() error {
 
 	var err error
-	var errr error
 	var bodyReader io.Reader
 
 	// Execute middleware.Config
@@ -142,15 +141,19 @@ func (t *Transaction) Send() error {
 		bodyReader, err = t.getRequestBody()
 
 		if err != nil {
-			return derp.NewInternalError("remote.Transaction.Send", "Error Creating Request Body", err, t.ErrorReport())
+			err = derp.Wrap(err, "remote.Transaction.Send", "Error Creating Request Body", t.BodyObject, t.ErrorReport())
+			derp.SetErrorCode(err, derp.CodeInternalError)
+			return err
 		}
 	}
 
 	// Create the HTTP client request
-	t.RequestObject, errr = http.NewRequest(t.Method, t.getURL(), bodyReader)
+	t.RequestObject, err = http.NewRequest(t.Method, t.getURL(), bodyReader)
 
-	if errr != nil {
-		return derp.NewInternalError("remote.Transaction.Send", "Error creating HTTP request", err, t.ErrorReport())
+	if err != nil {
+		err = derp.Wrap(err, "remote.Transaction.Send", "Error creating HTTP request", t.ErrorReport())
+		derp.SetErrorCode(err, derp.CodeInternalError)
+		return err
 	}
 
 	// Add headers to httpRequest
@@ -160,26 +163,30 @@ func (t *Transaction) Send() error {
 
 	// Execute middleware.Request
 	if err := t.doMiddlewareRequest(t.RequestObject); err != nil {
-		return err
+		return derp.Wrap(err, "remote.Transaction.Send", "Error executing middleware.Request", t.ErrorReport())
 	}
 
 	// Executing request using HTTP client
-	t.ResponseObject, errr = t.Client.Do(t.RequestObject)
+	t.ResponseObject, err = t.Client.Do(t.RequestObject)
 
-	if errr != nil {
-		return derp.NewInternalError("remote.Transaction.Send", "Error executing HTTP request", errr, t.ErrorReport())
+	if err != nil {
+		err = derp.Wrap(err, "remote.Transaction.Send", "Error executing HTTP request", t.ErrorReport())
+		derp.SetErrorCode(err, derp.CodeInternalError)
+		return err
 	}
 
 	// Packing into t.ResponseObject
-	body, errr := io.ReadAll(t.ResponseObject.Body)
+	body, err := io.ReadAll(t.ResponseObject.Body)
 
-	if errr != nil {
-		return derp.New(t.ResponseObject.StatusCode, "remote.Transaction.Send", "Error reading response body", errr, t.ErrorReport(), t.ResponseObject)
+	if err != nil {
+		err = derp.Wrap(err, "remote.Transaction.Send", "Error reading response body", t.ErrorReport(), t.ResponseObject)
+		derp.SetErrorCode(err, t.ResponseObject.StatusCode)
+		return err
 	}
 
 	// Execute middleware.Response
 	if err := t.doMiddlewareResponse(t.ResponseObject, &body); err != nil {
-		return err
+		return derp.Wrap(err, "remote.Transaction.Send", "Error executing middleware.Response", t.ErrorReport())
 	}
 
 	// If Response Code is NOT "OK", then handle the error
@@ -187,8 +194,10 @@ func (t *Transaction) Send() error {
 
 		// If we ALSO have an error object, then try to process the response body into that
 		if t.FailureObject != nil {
-			if er := t.readResponseBody(body, t.FailureObject); er != nil {
-				return derp.NewInternalError("remote.Transaction.Send", "Unable to parse error response", er, body)
+			if err := t.readResponseBody(body, t.FailureObject); err != nil {
+				err = derp.Wrap(err, "remote.Transaction.Send", "Unable to parse error response", err, body)
+				derp.SetErrorCode(err, t.ResponseObject.StatusCode)
+				return err
 			}
 		}
 
