@@ -338,9 +338,14 @@ func (t *Transaction) ErrorReport() ErrorReport {
 
 	result := ErrorReport{}
 
+	body := strings.Builder{}
+	bodyReader, _ := t.getRequestBody()
+	io.Copy(&body, bodyReader) // nolint:errcheck
+
 	result.URL = t.getURL()
 	result.Request.Method = t.Method
 	result.Request.Header = t.HeaderValues
+	result.Request.Body = body.String()
 
 	if t.ResponseObject != nil {
 		result.Response.StatusCode = t.ResponseObject.StatusCode
