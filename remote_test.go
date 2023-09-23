@@ -7,30 +7,30 @@ import (
 	"testing"
 
 	"github.com/benpate/derp"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRequestMethods(t *testing.T) {
 
 	get := Get("someurl.com")
-	assert.Equal(t, "GET", get.Method)
-	assert.Equal(t, "someurl.com", get.URLValue)
+	require.Equal(t, "GET", get.method)
+	require.Equal(t, "someurl.com", get.url)
 
 	post := Post("someurl.com")
-	assert.Equal(t, "POST", post.Method)
-	assert.Equal(t, "someurl.com", post.URLValue)
+	require.Equal(t, "POST", post.method)
+	require.Equal(t, "someurl.com", post.url)
 
 	put := Put("someurl.com")
-	assert.Equal(t, "PUT", put.Method)
-	assert.Equal(t, "someurl.com", put.URLValue)
+	require.Equal(t, "PUT", put.method)
+	require.Equal(t, "someurl.com", put.url)
 
 	patch := Patch("someurl.com")
-	assert.Equal(t, "PATCH", patch.Method)
-	assert.Equal(t, "someurl.com", patch.URLValue)
+	require.Equal(t, "PATCH", patch.method)
+	require.Equal(t, "someurl.com", patch.url)
 
 	delete := Delete("someurl.com")
-	assert.Equal(t, "DELETE", delete.Method)
-	assert.Equal(t, "someurl.com", delete.URLValue)
+	require.Equal(t, "DELETE", delete.method)
+	require.Equal(t, "someurl.com", delete.url)
 }
 
 func TestGet(t *testing.T) {
@@ -43,7 +43,7 @@ func TestGet(t *testing.T) {
 	}{}
 
 	transaction := Get("https://jsonplaceholder.typicode.com/users").
-		Response(&users, nil)
+		Result(&users)
 
 	// Get data from a remote server
 	// nolint:errcheck // just a test
@@ -52,9 +52,9 @@ func TestGet(t *testing.T) {
 		t.Fail()
 	}
 
-	assert.Equal(t, users[0].Name, "Leanne Graham")
-	assert.Equal(t, users[0].Username, "Bret")
-	assert.Equal(t, users[0].Email, "Sincere@april.biz")
+	require.Equal(t, users[0].Name, "Leanne Graham")
+	require.Equal(t, users[0].Username, "Bret")
+	require.Equal(t, users[0].Email, "Sincere@april.biz")
 }
 
 func TestPost(t *testing.T) {
@@ -71,20 +71,26 @@ func TestPost(t *testing.T) {
 	success := map[string]any{}
 	failure := map[string]any{}
 
-	if err := Post(ts.URL).JSON(body).Response(&success, &failure).Send(); err != nil {
-		t.Log(err)
-		t.Log(failure)
-		return
+	txn := Post(ts.URL).
+		JSON(body).
+		Result(&success).
+		Error(&failure)
+
+	if err := txn.Send(); err != nil {
+		derp.Report(err)
+		t.Fail()
 	}
 
-	assert.Equal(t, "1", success["first"])
-	assert.Equal(t, "2", success["second"])
-	assert.Equal(t, "3", success["third"])
+	require.Equal(t, "1", success["first"])
+	require.Equal(t, "2", success["second"])
+	require.Equal(t, "3", success["third"])
 }
 
 func echoBodyServer() *httptest.Server {
 
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
 
 		body := new(bytes.Buffer)
 		// nolint:errcheck // just a test

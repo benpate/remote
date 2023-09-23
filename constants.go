@@ -7,6 +7,9 @@ const Accept = "Accept"
 // ContentType is the string used in the HTTP header to designate a MIME type
 const ContentType = "Content-Type"
 
+// UserAgent is the string used in the HTTP header to identify the client making the request
+const UserAgent = "User-Agent"
+
 // ContentTypeActivityPub is the standard MIME type for ActivityPub content
 const ContentTypeActivityPub = "application/activity+json"
 

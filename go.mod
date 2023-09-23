@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/benpate/derp v0.28.1
-	github.com/benpate/re v0.1.0
 	github.com/stretchr/testify v1.8.4
 )
 

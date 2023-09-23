@@ -9,13 +9,13 @@ import (
 func newTransaction(method string, urlValue string) *Transaction {
 
 	t := &Transaction{
-		Client:       &http.Client{Timeout: 10 * time.Second},
-		Method:       method,
-		URLValue:     urlValue,
-		HeaderValues: map[string]string{},
-		QueryString:  url.Values{},
-		FormData:     url.Values{},
-		Middleware:   []Middleware{},
+		client:  &http.Client{Timeout: 10 * time.Second},
+		method:  method,
+		url:     urlValue,
+		header:  map[string]string{},
+		query:   url.Values{},
+		form:    url.Values{},
+		options: []Option{},
 	}
 
 	return t
