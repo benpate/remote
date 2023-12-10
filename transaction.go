@@ -222,6 +222,8 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 
 	var bodyReader io.Reader
 
+	t.assembleBearCap()
+
 	// GET methods don't have an HTTP Body.  For all other methods,
 	// it's time to defined the body content.
 	if t.method != http.MethodGet {
@@ -252,6 +254,48 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	}
 
 	return result, nil
+}
+
+// assembleBearCap pre-processes special bearer capability URLs.
+// And of course, there's no "actual" documentation for this, so we're just going to use
+// https://docs.joinmastodon.org/spec/bearcaps/ as the canonical source.
+func (t *Transaction) assembleBearCap() error {
+
+	const location = "remote.Transaction.assembleBearCap"
+
+	// BearCap URLs are special.  They are used to pass a token to a remote server
+	if strings.HasPrefix(t.url, "bear:?") {
+
+		// Splie the URL into the bearcap "protocol" and the query string
+		_, queryString, _ := strings.Cut(t.url, "?")
+
+		values, err := url.ParseQuery(queryString)
+
+		if err != nil {
+			return derp.Wrap(err, location, "Invalid BearCap URL", t.url)
+		}
+
+		// Validate the "u" parameter is present
+		uri := values.Get("u")
+
+		if uri == "" {
+			return derp.NewInternalError(location, "BearCap URL is required", t.url)
+		}
+
+		// Validate the "t" parameter is present
+		token := values.Get("t")
+
+		if token == "" {
+			return derp.NewInternalError(location, "BearCap Token is required", t.url)
+		}
+
+		// Set the correct values in the transaction.
+		t.url = uri
+		t.header["Authorization"] = "Bearer " + token
+	}
+
+	// Success!!
+	return nil
 }
 
 // ErrorReport generates a data dump of the current state of the HTTP transaction.

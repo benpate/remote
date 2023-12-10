@@ -107,3 +107,13 @@ func TestTxn(t *testing.T) {
 	var txn Transaction
 	require.NotNil(t, txn)
 }
+
+func TestBearCaps(t *testing.T) {
+
+	tx := Get("bear:?t=123456789101112&u=http://test.com")
+	err := tx.assembleBearCap()
+
+	require.Nil(t, err)
+	require.Equal(t, "Bearer 123456789101112", tx.header["Authorization"])
+	require.Equal(t, "http://test.com", tx.url)
+}
