@@ -40,6 +40,10 @@ const ContentTypeForm = "application/x-www-form-urlencoded"
 // ContentTypeXML is the standard MIME Type for XML content
 const ContentTypeXML = "application/xml"
 
+const ContentTypeAtomXML = "application/atom+xml"
+
+const ContentTypeRSSXML = "application/rss+xml"
+
 // contentTypeNonStandardXMLText is a non-standard MIME Type that might be used by other systems for XML content
 const contentTypeNonStandardXMLText = "text/xml"
 

@@ -47,6 +47,7 @@ func (t *Transaction) RequestBody() ([]byte, error) {
 		return []byte(t.form.Encode()), nil
 
 	case ContentTypeJSON,
+		ContentTypeJSONLD,
 		ContentTypeActivityPub,
 		ContentTypeJSONResourceDescriptor,
 		ContentTypeJSONFeed,

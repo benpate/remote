@@ -109,7 +109,11 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	case ContentTypePlain, ContentTypeHTML:
 		return derp.NewInternalError("remote.Transaction.readResponseBody", "HTML must be read into an io.Writer, *string, or *byte[]", result)
 
-	case ContentTypeXML, contentTypeNonStandardXMLText:
+	case
+		ContentTypeXML,
+		contentTypeNonStandardXMLText,
+		ContentTypeRSSXML,
+		ContentTypeAtomXML:
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
@@ -120,6 +124,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 	case
 		ContentTypeJSON,
+		ContentTypeJSONLD,
 		ContentTypeActivityPub,
 		ContentTypeJSONResourceDescriptor,
 		ContentTypeJSONFeed,
