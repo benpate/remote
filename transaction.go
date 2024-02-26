@@ -185,9 +185,7 @@ func (t *Transaction) Send() error {
 	body, err := t.ResponseBody()
 
 	if err != nil {
-		err = derp.Wrap(err, location, "Error reading response body", t.errorReport(), t.response)
-		derp.SetErrorCode(err, t.response.StatusCode)
-		return err
+		return derp.Wrap(err, location, "Error reading response body", t.errorReport(), t.response, derp.WithCode(t.response.StatusCode))
 	}
 
 	// If Response Code is NOT "OK", then handle the error
@@ -196,14 +194,12 @@ func (t *Transaction) Send() error {
 		// Try to decode the response body into the failure object
 		if t.failure != nil {
 			if err := t.decodeResponseBody(body, t.failure); err != nil {
-				err = derp.Wrap(err, location, "Unable to parse error response", err, body)
-				derp.SetErrorCode(err, t.response.StatusCode)
-				return err
+				return derp.Wrap(err, location, "Unable to parse error response", err, body, derp.WithCode(t.response.StatusCode))
 			}
 		}
 
 		// Return the error to the caller
-		return derp.New(t.response.StatusCode, location, "Error returned by remote service", t.errorReport())
+		return derp.New(t.response.StatusCode, location, "Error returned by remote service", t.errorReport(), derp.WithCode(t.response.StatusCode))
 	}
 
 	// Fall through to here means that this is a successful response.
@@ -222,7 +218,9 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 
 	var bodyReader io.Reader
 
-	t.assembleBearCap()
+	if err := t.assembleBearCap(); err != nil {
+		return nil, derp.Wrap(err, location, "Error assembling BearCap")
+	}
 
 	// GET methods don't have an HTTP Body.  For all other methods,
 	// it's time to defined the body content.
