@@ -170,9 +170,7 @@ func (t *Transaction) Send() error {
 		t.response, err = t.client.Do(t.request)
 
 		if err != nil {
-			err = derp.Wrap(err, location, "Error executing HTTP request", t.errorReport())
-			derp.SetErrorCode(err, derp.CodeInternalError)
-			return err
+			return derp.Wrap(err, location, "Error executing HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 		}
 	}
 
@@ -229,9 +227,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 		body, err := t.RequestBody()
 
 		if err != nil {
-			err = derp.Wrap(err, location, "Error Creating Request Body", t.body, t.errorReport())
-			derp.SetErrorCode(err, derp.CodeInternalError)
-			return nil, err
+			return nil, derp.Wrap(err, location, "Error Creating Request Body", t.body, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 		}
 
 		bodyReader = bytes.NewReader(body)
@@ -241,9 +237,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	result, err := http.NewRequest(t.method, t.RequestURL(), bodyReader)
 
 	if err != nil {
-		err = derp.Wrap(err, location, "Error creating HTTP request", t.errorReport())
-		derp.SetErrorCode(err, derp.CodeInternalError)
-		return nil, err
+		return nil, derp.Wrap(err, location, "Error creating HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 	}
 
 	// Add headers to httpRequest
