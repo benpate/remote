@@ -1,17 +1,15 @@
 package remote
 
 import (
-	"net/http"
 	"net/url"
-	"time"
 )
 
-func newTransaction(method string, urlValue string) *Transaction {
+func New() *Transaction {
 
 	t := &Transaction{
-		client:  &http.Client{Timeout: 10 * time.Second},
-		method:  method,
-		url:     urlValue,
+		client:  DefaultClient(),
+		method:  "",
+		url:     "",
 		header:  map[string]string{},
 		query:   url.Values{},
 		form:    url.Values{},
@@ -23,25 +21,25 @@ func newTransaction(method string, urlValue string) *Transaction {
 
 // Get creates a new HTTP request to the designated URL, using the GET method
 func Get(url string) *Transaction {
-	return newTransaction(http.MethodGet, url)
+	return New().Get(url)
 }
 
 // Post creates a new HTTP request to the designated URL, using the POST method
 func Post(url string) *Transaction {
-	return newTransaction(http.MethodPost, url)
+	return New().Post(url)
 }
 
 // Put creates a new HTTP request to the designated URL, using the PUT method
 func Put(url string) *Transaction {
-	return newTransaction(http.MethodPut, url)
+	return New().Put(url)
 }
 
 // Patch creates a new HTTP request to the designated URL, using the PATCH method
 func Patch(url string) *Transaction {
-	return newTransaction(http.MethodPatch, url)
+	return New().Patch(url)
 }
 
 // Delete creates a new HTTP request to the designated URL, using the DELETE method.
 func Delete(url string) *Transaction {
-	return newTransaction(http.MethodDelete, url)
+	return New().Delete(url)
 }

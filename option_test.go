@@ -20,7 +20,7 @@ func TestOption(t *testing.T) {
 	server := echoBodyServer()
 
 	// nolint:errcheck // just a test
-	Get(server.URL).Use(middleware).Send()
+	Get(server.URL).With(middleware).Send()
 }
 
 func TestOptionErrors(t *testing.T) {
@@ -42,12 +42,12 @@ func TestOptionErrors(t *testing.T) {
 	}
 
 	// We're EXPECTING an error, so if there's no error, then that's BAD.
-	if err := Get(server.URL).Use(configError).Send(); err == nil {
+	if err := Get(server.URL).With(configError).Send(); err == nil {
 		t.Fail()
 	}
 
 	// We're EXPECTING an error, so if there's no error, then that's BAD.
-	if err := Get(server.URL).Use(responseError).Send(); err == nil {
+	if err := Get(server.URL).With(responseError).Send(); err == nil {
 		t.Fail()
 	}
 }

@@ -32,6 +32,47 @@ type Transaction struct {
  * Chaining API methods
  ******************************************/
 
+// Get assigns the HTTP method and URL for this transaction.
+func (t *Transaction) Get(url string) *Transaction {
+	t.method = http.MethodGet
+	t.url = url
+	return t
+}
+
+// Post assigns the HTTP method and URL for this transaction.
+func (t *Transaction) Post(url string) *Transaction {
+	t.method = http.MethodPost
+	t.url = url
+	return t
+}
+
+// Put assigns the HTTP method and URL for this transaction.
+func (t *Transaction) Put(url string) *Transaction {
+	t.method = http.MethodPut
+	t.url = url
+	return t
+}
+
+// Patch assigns the HTTP method and URL for this transaction.
+func (t *Transaction) Patch(url string) *Transaction {
+	t.method = http.MethodPatch
+	t.url = url
+	return t
+}
+
+// Delete assigns the HTTP method and URL for this transaction.
+func (t *Transaction) Delete(url string) *Transaction {
+	t.method = http.MethodDelete
+	t.url = url
+	return t
+}
+
+// Client sets the HTTP client to use for the transaction.
+func (t *Transaction) Client(client *http.Client) *Transaction {
+	t.client = client
+	return t
+}
+
 // Header sets a designated header value in the HTTP request.
 func (t *Transaction) Header(name string, value string) *Transaction {
 	t.header[name] = value
@@ -116,17 +157,11 @@ func (t *Transaction) isContentTypeEmpty() bool {
 	return t.header[ContentType] == ""
 }
 
-// Use lets you add remote.Options to the transaction. Options modify
+// With lets you add remote.Options to the transaction. Options modify
 // transaction data before and after it is sent to the remote server.
-func (t *Transaction) Use(options ...Option) *Transaction {
+func (t *Transaction) With(options ...Option) *Transaction {
 	t.options = append(t.options, options...)
 	return t
-}
-
-// WithOptions is an alias for the `Use` method. It applies one or more
-// request.options to the Transaction.
-func (t *Transaction) WithOptions(options ...Option) *Transaction {
-	return t.Use(options...)
 }
 
 // Result sets the object for parsing HTTP success responses
