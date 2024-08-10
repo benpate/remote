@@ -3,7 +3,7 @@ package options
 import (
 	"fmt"
 	"net/http"
-	"strconv"
+	"net/http/httputil"
 
 	"github.com/benpate/derp"
 	"github.com/benpate/remote"
@@ -16,26 +16,16 @@ func Debug() remote.Option {
 
 		ModifyRequest: func(transaction *remote.Transaction, request *http.Request) *http.Response {
 
-			body, err := transaction.RequestBody()
+			content, err := httputil.DumpRequestOut(request, true)
 
 			if err != nil {
 				derp.Report(derp.Wrap(err, "remote.option.Debug", "Error reading body"))
 			}
 
 			fmt.Println("")
-			fmt.Println("HTTP Request")
-			fmt.Println("-------------")
-			fmt.Println("Method: ", request.Method)
-			fmt.Println("URL: ", request.URL.String())
-			fmt.Println("Content-Length: " + strconv.FormatInt(request.ContentLength, 10))
-			fmt.Println("Headers:")
-
-			for i := range request.Header {
-				fmt.Println("- ", i, ": ", request.Header.Get(i))
-			}
-
-			fmt.Println("")
-			fmt.Println(string(body))
+			fmt.Println("Begin HTTP Request -----------------------")
+			fmt.Println(string(content))
+			fmt.Println("END --------------------------------------")
 			fmt.Println("")
 
 			return nil
@@ -44,23 +34,17 @@ func Debug() remote.Option {
 		AfterRequest: func(transaction *remote.Transaction, response *http.Response) error {
 
 			fmt.Println("")
-			fmt.Println("HTTP Response")
-			fmt.Println("-------------")
+			fmt.Println("Begin HTTP Response ----------------------")
 
-			fmt.Println("Status Code: ", strconv.Itoa(response.StatusCode))
-			fmt.Println("Status: ", response.Status)
-			fmt.Println("Headers:")
+			content, err := httputil.DumpResponse(response, true)
 
-			for i := range response.Header {
-				fmt.Println("- ", i, ": ", response.Header.Get(i))
+			if err != nil {
+				derp.Report(derp.Wrap(err, "remote.option.Debug", "Error reading body"))
 			}
 
-			if body, err := transaction.ResponseBody(); err == nil {
-				fmt.Println("")
-				fmt.Println(string(body))
-				fmt.Println("")
-			}
-
+			fmt.Println(string(content))
+			fmt.Println("END --------------------------------------")
+			fmt.Println("")
 			return nil
 		},
 	}
