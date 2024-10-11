@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/benpate/derp v0.31.0
 	github.com/benpate/rosetta v0.22.1
-	github.com/benpate/turbine v0.0.2
+	github.com/benpate/turbine v0.0.3
 	github.com/stretchr/testify v1.9.0
 )
 
