@@ -117,3 +117,29 @@ func TestBearCaps(t *testing.T) {
 	require.Equal(t, "Bearer 123456789101112", tx.header["Authorization"])
 	require.Equal(t, "http://test.com", tx.url)
 }
+
+func TestMarshaller(t *testing.T) {
+
+	tx1 := Get("http://example.com").
+		UserAgent("Testy McTesterson").
+		Accept("text/plain").
+		Query("name1", "value1").
+		Form("name2", "value2")
+
+	original := tx1.MarshalMap()
+
+	tx2 := New()
+	err := tx2.UnmarshalMap(original)
+	require.Nil(t, err)
+
+	require.Equal(t, tx1.method, tx2.method)
+	require.Equal(t, tx1.url, tx2.url)
+	require.Equal(t, tx1.header, tx2.header)
+	require.Equal(t, tx1.query, tx2.query)
+	require.Equal(t, tx1.form, tx2.form)
+
+	require.Equal(t, "value2", tx2.form.Get("name2"))
+	require.Equal(t, "text/plain", tx2.header["Accept"])
+	require.Equal(t, "Testy McTesterson", tx2.header["User-Agent"])
+	require.Equal(t, "application/x-www-form-urlencoded", tx2.header["Content-Type"])
+}

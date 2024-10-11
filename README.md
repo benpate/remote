@@ -126,6 +126,27 @@ It's easy to write additional, custom middleware for your project.  Just follow 
 
 **`Response(*http.Response)`** allows you to modify the raw HTTP response before its results are parsed and returned to the caller.
 
+### Queueing and Retrying Failed Transactions
+
+Remote works with the [Turbine queue](https://github.com/benpate/turbine) to queue and retry transactions.  To configure this:
+
+1. Create an instance of the Turbine queue 
+2. Add the `remote.Consumer()` to the queue, to execute queued transactions  
+3. Use the queue for any transactions you want to delay, or retry on failure.
+4. You can modify the queued task using any number of Task Options, such as setting the priority, delay time, or retry count.
+
+```golang
+
+myQueue := queue.New(WithConsumers(remote.Consumer()))
+
+remote.Post("https://server.com").
+    Queue(myQueue, queue.WithPriority(0)).
+    Send()
+```
+
+When you queue a transaction it is executed asynchronously, and possibly several times until successful.  This means that you cannot receive live responses in your application anymore.  So, `Result` and `Error` modifiers will be ignored, as will the `AfterRequest` portions of any options.
+
+
 ## Pull Requests Welcome
 
 Original versions of this library have been used in production on commercial applications for years, and have helped speed up development for everyone involved.  
