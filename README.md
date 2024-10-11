@@ -141,23 +141,6 @@ remote.Post("https://server.com").
 
 ### Publish Transactions to a Queue
 
-### Consume Transactions from a Queue
-
-Remote includes a turbine queue.Consumer that executes remote.Transactions from the queue.  This consumer can take any number of remote.Options to configure how queued transactions will be executed.
-
-```golang
-
-// Create a queue.Consumer to handle remote transactions
-consumer := remote.Consumer(
-    remote.WithClient(...) // these options modify the created remote.Transaction
-)
-
-myQueue := queue.New(WithConsumers(consumer))
-
-```
-
-### Queueing and Retrying Failed Transactions
-
 When you create a remote Transaction, you can add it to a Turbine queue using the `.Queue` method.  This method allows you to include a list of Task Options that modify the task that is published to the queue.  For instance, you can choose a specific task priority, delay time, or maximum retry count.
 
 ```go
@@ -171,6 +154,21 @@ remote.Post("https://server.com").
 
 **IMPORTANT:** When you queue a transaction it is executed asynchronously, and possibly several times until successful.  This means that you cannot receive live responses in your application anymore.  So, `Result` and `Error` modifiers will be ignored, as will the `AfterRequest` portions of any options.
 
+
+### Consume Transactions from a Queue
+
+This library includes a turbine queue.Consumer that executes remote.Transactions from the queue.  This consumer can take any number of remote.Options to configure how queued transactions will be executed.
+
+```golang
+
+// Create a queue.Consumer to handle remote transactions
+consumer := remote.Consumer(
+    remote.WithClient(...) // these options modify the created remote.Transaction
+)
+
+myQueue := queue.New(WithConsumers(consumer))
+
+```
 
 ## Pull Requests Welcome
 
