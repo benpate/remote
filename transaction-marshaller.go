@@ -47,7 +47,7 @@ func (t *Transaction) MarshalMap() map[string]any {
 		"url":    t.url,
 		"header": t.header,
 		"query":  t.query,
-		"date":   t.request.Header.Get("Date"),
+		"date":   t.header["Date"],
 		"body":   string(body),
 	}
 
