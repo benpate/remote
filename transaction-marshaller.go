@@ -2,15 +2,20 @@ package remote
 
 import (
 	"encoding/json"
+	"net/http"
 
 	"github.com/benpate/derp"
 	"github.com/benpate/rosetta/convert"
 )
 
+// MarshalJSON implements the json.Marhsaller interface,
+// which writes the Transaction object to a JSON string.
 func (t *Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.MarshalMap())
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface,
+// which reads a Transaction object from a JSON string.
 func (t *Transaction) UnmarshalJSON(data []byte) error {
 
 	const location = "remote.Transaction.UnmarshalJSON"
@@ -28,18 +33,28 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalMap converts a Transaction object into a map[string]any
 func (t *Transaction) MarshalMap() map[string]any {
 
-	return map[string]any{
+	var body []byte
+
+	if t.method != http.MethodGet {
+		body, _ = t.RequestBody()
+	}
+
+	result := map[string]any{
 		"method": t.method,
 		"url":    t.url,
 		"header": t.header,
 		"query":  t.query,
-		"form":   t.form,
-		"body":   convert.String(t.body),
+		"date":   t.request.Header.Get("Date"),
+		"body":   string(body),
 	}
+
+	return result
 }
 
+// UnmarshalMap populates a Transaction object from a map[string]any
 func (t *Transaction) UnmarshalMap(value map[string]any) error {
 
 	t.method = convert.String(value["method"])
@@ -48,6 +63,7 @@ func (t *Transaction) UnmarshalMap(value map[string]any) error {
 	t.query = convert.URLValues(value["query"])
 	t.form = convert.URLValues(value["form"])
 	t.body = convert.String(value["body"])
+	t.header["Date"] = convert.String(value["date"])
 
 	return nil
 }
