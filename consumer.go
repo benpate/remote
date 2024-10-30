@@ -8,7 +8,7 @@ import (
 // Consumer is a queue.Consumer that sends processes queued HTTP transactions
 func Consumer(options ...Option) queue.Consumer {
 
-	const location = "remotequeue.Consumer"
+	const location = "remote.Consumer"
 
 	return func(name string, arguments map[string]any) (bool, error) {
 
