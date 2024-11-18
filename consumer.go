@@ -10,11 +10,11 @@ func Consumer(options ...Option) queue.Consumer {
 
 	const location = "remote.Consumer"
 
-	return func(name string, arguments map[string]any) (bool, error) {
+	return func(name string, arguments map[string]any) queue.Result {
 
-		// Only process remotequeue transactions
+		// Ignore transactions that are not "remote.Transaction.Send"
 		if name != queueTransactionName {
-			return false, nil
+			return queue.Ignored()
 		}
 
 		// Create a new Transaction using configured Options
@@ -22,15 +22,15 @@ func Consumer(options ...Option) queue.Consumer {
 
 		// Unmarshal the arguments into the transaction
 		if err := transaction.UnmarshalMap(arguments); err != nil {
-			return true, derp.Wrap(err, location, "Error unmarshalling transaction", arguments)
+			return queue.Failure(derp.Wrap(err, location, "Error unmarshalling transaction", arguments))
 		}
 
 		// Send the transaction
 		if err := transaction.Send(); err != nil {
-			return true, derp.Wrap(err, location, "Error sending transaction", transaction)
+			return queue.Error(derp.Wrap(err, location, "Error sending transaction", transaction))
 		}
 
 		// Success!
-		return true, nil
+		return queue.Success()
 	}
 }

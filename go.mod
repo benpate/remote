@@ -3,9 +3,9 @@ module github.com/benpate/remote
 go 1.23
 
 require (
-	github.com/benpate/derp v0.31.0
-	github.com/benpate/rosetta v0.23.0
-	github.com/benpate/turbine v0.1.2
+	github.com/benpate/derp v0.31.1
+	github.com/benpate/rosetta v0.23.2
+	github.com/benpate/turbine v0.2.0
 	github.com/stretchr/testify v1.9.0
 )
 
@@ -19,7 +19,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rs/zerolog v1.33.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/net v0.31.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
