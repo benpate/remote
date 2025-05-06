@@ -48,7 +48,7 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 
 	// Guard against NPE
 	if t.response == nil {
-		return []byte{}, derp.NewInternalError("remote.Transaction.ResponseBytes", "Response object is nil", t.errorReport())
+		return []byte{}, derp.InternalError("remote.Transaction.ResponseBytes", "Response object is nil", t.errorReport())
 	}
 
 	// Read the original response body
@@ -107,7 +107,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	switch contentType {
 
 	case ContentTypePlain, ContentTypeHTML:
-		return derp.NewInternalError("remote.Transaction.readResponseBody", "HTML must be read into an io.Writer, *string, or *byte[]", result)
+		return derp.InternalError("remote.Transaction.readResponseBody", "HTML must be read into an io.Writer, *string, or *byte[]", result)
 
 	case
 		ContentTypeXML,
@@ -117,7 +117,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.NewInternalError("remote.Transaction.readResponseBody", "Error Unmarshalling XML Response", err, string(body), result, t.errorReport())
+			return derp.InternalError("remote.Transaction.readResponseBody", "Error Unmarshalling XML Response", err, string(body), result, t.errorReport())
 		}
 
 		return nil
@@ -132,12 +132,12 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.NewInternalError("remote.Transaction.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.errorReport())
+			return derp.InternalError("remote.Transaction.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.errorReport())
 		}
 
 		return nil
 	}
 
 	// If we're here, it means we don't know how to unmarshal the response body.
-	return derp.NewInternalError("remote.Transaction.readResponseBody", "Unsupported Content-Type", contentType, t.errorReport())
+	return derp.InternalError("remote.Transaction.readResponseBody", "Unsupported Content-Type", contentType, t.errorReport())
 }

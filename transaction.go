@@ -274,13 +274,13 @@ func (t *Transaction) Send() error {
 		}
 
 		// Return the error to the caller
-		return derp.New(t.response.StatusCode, location, "Error returned by remote service", t.errorReport(), derp.WithCode(t.response.StatusCode))
+		return derp.InternalError(location, "Error returned by remote service", t.errorReport(), derp.WithCode(t.response.StatusCode))
 	}
 
 	// Fall through to here means that this is a successful response.
 	// Decode the response body into the success object.
 	if err := t.decodeResponseBody(body, t.success); err != nil {
-		return derp.NewInternalError(location, "Error processing response body", err, t.errorReport())
+		return derp.InternalError(location, "Error processing response body", err, t.errorReport())
 	}
 
 	// Glorious success.
@@ -348,14 +348,14 @@ func (t *Transaction) assembleBearCap() error {
 		uri := values.Get("u")
 
 		if uri == "" {
-			return derp.NewInternalError(location, "BearCap URL is required", t.url)
+			return derp.InternalError(location, "BearCap URL is required", t.url)
 		}
 
 		// Validate the "t" parameter is present
 		token := values.Get("t")
 
 		if token == "" {
-			return derp.NewInternalError(location, "BearCap Token is required", t.url)
+			return derp.InternalError(location, "BearCap Token is required", t.url)
 		}
 
 		// Set the correct values in the transaction.

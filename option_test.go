@@ -30,14 +30,14 @@ func TestOptionErrors(t *testing.T) {
 	// Create a simple middleware to write the transaction to stdout
 	configError := Option{
 		BeforeRequest: func(transaction *Transaction) error {
-			return derp.NewInternalError("Option.Config", "Error Running Option")
+			return derp.InternalError("Option.Config", "Error Running Option")
 		},
 	}
 
 	// Create a simple middleware to write the transaction to stdout
 	responseError := Option{
 		AfterRequest: func(transaction *Transaction, response *http.Response) error {
-			return derp.NewInternalError("Option.Response", "Error Running Option")
+			return derp.InternalError("Option.Response", "Error Running Option")
 		},
 	}
 

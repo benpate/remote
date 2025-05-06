@@ -56,12 +56,12 @@ func (t *Transaction) RequestBody() ([]byte, error) {
 		result, err := json.Marshal(t.body)
 
 		if err != nil {
-			return nil, derp.NewInternalError(location, "Error Marshalling JSON", err, t.errorReport(), t.body)
+			return nil, derp.InternalError(location, "Error Marshalling JSON", err, t.errorReport(), t.body)
 		}
 
 		return result, nil
 	}
 
 	// Fall through to here means that we have an unrecognized content type.  Return an error.
-	return []byte{}, derp.NewInternalError(location, "Unsupported Content-Type", contentType, t.errorReport())
+	return []byte{}, derp.InternalError(location, "Unsupported Content-Type", contentType, t.errorReport())
 }
