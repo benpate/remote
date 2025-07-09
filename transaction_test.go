@@ -59,6 +59,17 @@ func TestQuery(t *testing.T) {
 	require.Equal(t, "value2", tx.query.Get("name2"))
 }
 
+func TestQuery_Multiple(t *testing.T) {
+
+	tx := Get("http://example.com")
+
+	tx.Query("name", "value1")
+	tx.Query("name", "value2")
+	tx.Query("name", "value3")
+
+	require.Equal(t, []string{"value1", "value2", "value3"}, tx.query["name"])
+}
+
 func TestForm(t *testing.T) {
 
 	tx := Get("http://example.com")

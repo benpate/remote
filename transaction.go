@@ -128,13 +128,13 @@ func (t *Transaction) UserAgent(value string) *Transaction {
 
 // Query sets a name/value pair in the URL query string.
 func (t *Transaction) Query(name string, value string) *Transaction {
-	t.query.Set(name, value)
+	t.query.Add(name, value)
 	return t
 }
 
 // Form adds a name/value pair to the form data to be sent to the remote server.
 func (t *Transaction) Form(name string, value string) *Transaction {
-	t.form.Set(name, value)
+	t.form.Add(name, value)
 	return t.ContentType(ContentTypeForm)
 }
 
