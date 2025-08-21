@@ -99,35 +99,3 @@ func echoBodyServer() *httptest.Server {
 		w.Write(body.Bytes())
 	}))
 }
-
-/*
-func TestRequestBinGet(t *testing.T) {
-
-	// Check results at: https://pipedream.com/r/envocp9hr03ig
-
-	Get("https://envocp9hr03ig.x.pipedream.net").
-		Query("name1", "value1").
-		Query("name2", "value2").
-		Query("name3", "value3").
-		Send()
-}
-
-func TestRequestBinPost(t *testing.T) {
-
-	body := map[string]string{
-		"hello":  "darkness",
-		"my-old": "friend",
-	}
-
-	// Check results at: https://pipedream.com/r/envocp9hr03ig
-
-	transaction := Post("https://envocp9hr03ig.x.pipedream.net/path/goes/here").
-		JSON(body).
-		Header("User-Agent", "remote")
-
-	if err := transaction.Send(); err != nil {
-		err.Report()
-		t.Fail()
-	}
-}
-*/
