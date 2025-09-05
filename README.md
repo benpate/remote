@@ -8,7 +8,7 @@
 
 ## Crazy Simple, Chainable HTTP Client for Go
 
-Remote is a paper-thin wrapper on top of Go's HTTP library, that gives you sensible defaults, a pretty API with some modern conveniences, and full control of your HTTP requests.  It's the fastest and easiest way to make an HTTP call using Go.
+Remote is a paper-thin wrapper for Go's HTTP library, that gives you sensible defaults, a pretty API with some modern conveniences, and full control of your HTTP requests.  It's the fastest and easiest way to make an HTTP call using Go.
 
 Inspired by [Brandon Romano's Wrecker](https://github.com/BrandonRomano/wrecker).  Thanks Brandon!
 
