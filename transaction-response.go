@@ -18,22 +18,35 @@ func (t *Transaction) Response() *http.Response {
 
 // ResponseHeader returns the HTTP response header.
 func (t *Transaction) ResponseHeader() http.Header {
+
 	if t.response == nil {
-		return nil
+		return http.Header{}
 	}
+
+	if t.response.Header == nil {
+		return http.Header{}
+	}
+
 	return t.response.Header
 }
 
 // ResponseContentType returns the Content-Type header of the response.
 func (t *Transaction) ResponseContentType() string {
+
 	if t.response == nil {
 		return ""
 	}
+
+	if t.response.Header == nil {
+		return ""
+	}
+
 	return t.response.Header.Get(ContentType)
 }
 
 // ResponseStatusCode returns the HTTP status code of the response.
 func (t *Transaction) ResponseStatusCode() int {
+
 	if t.response == nil {
 		return 0
 	}
@@ -102,7 +115,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 	// Otherwise, try to use the content type to pick an unmarshaller
 	contentType := t.response.Header.Get(ContentType) // Get the content type from the header
-	contentType = strings.Split(contentType, ";")[0]  // Strip out suffixes, such as "; charset=utf-8"
+	contentType, _, _ = strings.Cut(contentType, ";") // Strip out suffixes, such as "; charset=utf-8"
 
 	switch contentType {
 

@@ -258,23 +258,24 @@ func (t *Transaction) Send() error {
 
 	// read the body of the response
 	body, err := t.ResponseBody()
+	statusCode := t.statusCode()
 
 	if err != nil {
-		return derp.Wrap(err, location, "Error reading response body", t.errorReport(), t.response, derp.WithCode(t.response.StatusCode))
+		return derp.Wrap(err, location, "Error reading response body", t.errorReport(), t.response, derp.WithCode(statusCode))
 	}
 
 	// If Response Code is NOT "OK", then handle the error
-	if (t.response.StatusCode < 200) || (t.response.StatusCode > 299) {
+	if (statusCode < 200) || (statusCode > 299) {
 
 		// Try to decode the response body into the failure object
 		if t.failure != nil {
 			if err := t.decodeResponseBody(body, t.failure); err != nil {
-				return derp.Wrap(err, location, "Unable to parse error response", err, body, derp.WithCode(t.response.StatusCode))
+				return derp.Wrap(err, location, "Unable to parse error response", err, body, derp.WithCode(statusCode))
 			}
 		}
 
 		// Return the error to the caller
-		return derp.InternalError(location, "Error returned by remote service", t.errorReport(), derp.WithCode(t.response.StatusCode))
+		return derp.InternalError(location, "Error returned by remote service", t.errorReport(), derp.WithCode(statusCode))
 	}
 
 	// Fall through to here means that this is a successful response.
@@ -365,6 +366,15 @@ func (t *Transaction) assembleBearCap() error {
 
 	// Success!!
 	return nil
+}
+
+func (t *Transaction) statusCode() int {
+
+	if t.response != nil {
+		return t.response.StatusCode
+	}
+
+	return 0
 }
 
 // ErrorReport generates a data dump of the current state of the HTTP transaction.

@@ -59,10 +59,10 @@ func (t *Transaction) UnmarshalMap(value map[string]any) error {
 
 	t.method = convert.String(value["method"])
 	t.url = convert.String(value["url"])
-	t.header = convert.MapOfString(value["header"])
 	t.query = convert.URLValues(value["query"])
 	t.form = convert.URLValues(value["form"])
 	t.body = convert.String(value["body"])
+	t.header = convert.MapOfString(value["header"])
 	t.header["Date"] = convert.String(value["date"])
 
 	return nil
