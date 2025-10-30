@@ -4,14 +4,14 @@ go 1.24.0
 
 require (
 	github.com/benpate/derp v0.34.0
-	github.com/benpate/rosetta v0.25.20
+	github.com/benpate/rosetta v0.25.21
 	github.com/benpate/turbine v0.4.1
 	github.com/stretchr/testify v1.11.1
 )
 
 require (
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/benpate/exp v0.8.6 // indirect
+	github.com/benpate/exp v0.8.7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
