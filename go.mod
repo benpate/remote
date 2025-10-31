@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/benpate/derp v0.34.0
 	github.com/benpate/rosetta v0.25.21
-	github.com/benpate/turbine v0.4.1
+	github.com/benpate/turbine v0.4.2
 	github.com/stretchr/testify v1.11.1
 )
 
