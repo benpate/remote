@@ -211,7 +211,7 @@ func (t *Transaction) Send() error {
 
 	// Assemble the HTTP request from the transaction data
 	if request, err := t.assembleRequest(); err != nil {
-		return derp.Wrap(err, location, "Error creating HTTP request", t.errorReport())
+		return derp.Wrap(err, location, "Unable to create HTTP request", t.errorReport())
 	} else {
 		t.request = request
 	}
@@ -305,7 +305,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 		body, err := t.RequestBody()
 
 		if err != nil {
-			return nil, derp.Wrap(err, location, "Error Creating Request Body", t.body, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+			return nil, derp.Wrap(err, location, "Unable to create Request Body", t.body, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 		}
 
 		bodyReader = bytes.NewReader(body)
@@ -315,7 +315,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	result, err := http.NewRequest(t.method, t.RequestURL(), bodyReader)
 
 	if err != nil {
-		return nil, derp.Wrap(err, location, "Error creating HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+		return nil, derp.Wrap(err, location, "Unable to create HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 	}
 
 	// Add headers to httpRequest
