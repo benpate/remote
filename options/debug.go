@@ -19,7 +19,7 @@ func Debug() remote.Option {
 			content, err := httputil.DumpRequestOut(request, true)
 
 			if err != nil {
-				derp.Report(derp.Wrap(err, "remote.option.Debug", "Error reading body"))
+				derp.Report(derp.Wrap(err, "remote.option.Debug", "Unable to read body"))
 			}
 
 			fmt.Println("")
@@ -39,7 +39,7 @@ func Debug() remote.Option {
 			content, err := httputil.DumpResponse(response, true)
 
 			if err != nil {
-				derp.Report(derp.Wrap(err, "remote.option.Debug", "Error reading body"))
+				derp.Report(derp.Wrap(err, "remote.option.Debug", "Unable to read body"))
 			}
 
 			fmt.Println(string(content))

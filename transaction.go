@@ -261,7 +261,7 @@ func (t *Transaction) Send() error {
 	statusCode := t.statusCode()
 
 	if err != nil {
-		return derp.Wrap(err, location, "Error reading response body", t.errorReport(), t.response, derp.WithCode(statusCode))
+		return derp.Wrap(err, location, "Unable to read response body", t.errorReport(), t.response, derp.WithCode(statusCode))
 	}
 
 	// If Response Code is NOT "OK", then handle the error

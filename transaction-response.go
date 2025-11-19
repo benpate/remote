@@ -68,7 +68,7 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 	originalBytes, err := io.ReadAll(t.response.Body)
 
 	if err != nil {
-		return []byte{}, derp.Wrap(err, "remote.Transaction.ResponseBytes", "Error reading response body")
+		return []byte{}, derp.Wrap(err, "remote.Transaction.ResponseBytes", "Unable to read response body")
 	}
 
 	// Replace the (now used up) Body reader
