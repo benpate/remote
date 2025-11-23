@@ -235,7 +235,7 @@ func (t *Transaction) Send() error {
 
 		// Send it to the queue
 		if err := t.queue.Publish(task); err != nil {
-			return derp.Wrap(err, location, "Error sending transaction to queue", task)
+			return derp.Wrap(err, location, "Unable to send transaction to queue", task)
 		}
 
 		return nil
@@ -247,13 +247,13 @@ func (t *Transaction) Send() error {
 		t.response, err = t.client.Do(t.request)
 
 		if err != nil {
-			return derp.Wrap(err, location, "Error executing HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+			return derp.Wrap(err, location, "Unable to execute HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 		}
 	}
 
 	// onAfterRequest modifies the response received from the server.
 	if err := t.onAfterRequest(t.response); err != nil {
-		return derp.Wrap(err, location, "Error executing options.Response", t.errorReport())
+		return derp.Wrap(err, location, "Unable to execute options.Response", t.errorReport())
 	}
 
 	// read the body of the response
@@ -275,13 +275,13 @@ func (t *Transaction) Send() error {
 		}
 
 		// Return the error to the caller
-		return derp.InternalError(location, "Error returned by remote service", t.errorReport(), derp.WithCode(statusCode))
+		return derp.InternalError(location, "Remote service returned an error", t.errorReport(), derp.WithCode(statusCode))
 	}
 
 	// Fall through to here means that this is a successful response.
 	// Decode the response body into the success object.
 	if err := t.decodeResponseBody(body, t.success); err != nil {
-		return derp.InternalError(location, "Error processing response body", err, t.errorReport())
+		return derp.Wrap(err, location, "Unable to process response body", err, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 	}
 
 	// Glorious success.
@@ -295,7 +295,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	var bodyReader io.Reader
 
 	if err := t.assembleBearCap(); err != nil {
-		return nil, derp.Wrap(err, location, "Error assembling BearCap")
+		return nil, derp.Wrap(err, location, "Unable to assemble BearCap")
 	}
 
 	// GET methods don't have an HTTP Body.  For all other methods,

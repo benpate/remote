@@ -90,6 +90,8 @@ func (t *Transaction) ResponseBodyReader() io.Reader {
 // readResponseBody unmarshalls the response body into the result
 func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
+	const location = "remote.Transaction.readResponseBody"
+
 	// If we don't actually have a result (common for error documents) then there's nothing to do.
 	if result == nil {
 		return nil
@@ -100,7 +102,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 	case io.Writer:
 		if _, err := result.Write(body); err != nil {
-			return derp.Wrap(err, "remote.Transaction.readResponseBody", "Error writing response body to io.Writer", result)
+			return derp.Wrap(err, location, "Error writing response body to io.Writer", result)
 		}
 		return nil
 
@@ -120,7 +122,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	switch contentType {
 
 	case ContentTypePlain, ContentTypeHTML:
-		return derp.InternalError("remote.Transaction.readResponseBody", "HTML must be read into an io.Writer, *string, or *byte[]", result)
+		return derp.InternalError(location, "HTML must be read into an io.Writer, *string, or *byte[]", result)
 
 	case
 		ContentTypeXML,
@@ -130,7 +132,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.InternalError("remote.Transaction.readResponseBody", "Error Unmarshalling XML Response", err, string(body), result, t.errorReport())
+			return derp.InternalError(location, "Error Unmarshalling XML Response", err, string(body), result, t.errorReport())
 		}
 
 		return nil
@@ -145,12 +147,12 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.InternalError("remote.Transaction.readResponseBody", "Error Unmarshalling JSON Response", err, string(body), result, t.errorReport())
+			return derp.InternalError(location, "Error Unmarshalling JSON Response", err, string(body), result, t.errorReport())
 		}
 
 		return nil
 	}
 
 	// If we're here, it means we don't know how to unmarshal the response body.
-	return derp.InternalError("remote.Transaction.readResponseBody", "Unsupported Content-Type", contentType, t.errorReport())
+	return derp.InternalError(location, "Unsupported Content-Type", contentType, t.errorReport())
 }
