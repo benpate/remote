@@ -102,7 +102,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 	case io.Writer:
 		if _, err := result.Write(body); err != nil {
-			return derp.Wrap(err, location, "Error writing response body to io.Writer", result)
+			return derp.Wrap(err, location, "Unable to write response body to io.Writer", result)
 		}
 		return nil
 
@@ -132,7 +132,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.InternalError(location, "Error Unmarshalling XML Response", err, string(body), result, t.errorReport())
+			return derp.Wrap(err, location, "Unable to unmarshal XML Response", err, string(body), result, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 		}
 
 		return nil
@@ -147,7 +147,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.InternalError(location, "Error Unmarshalling JSON Response", err, string(body), result, t.errorReport())
+			return derp.Wrap(err, location, "Unable to unmarshal JSON Response", err, string(body), result, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
 		}
 
 		return nil
