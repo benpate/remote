@@ -132,7 +132,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.Wrap(err, location, "Unable to unmarshal XML Response", err, string(body), result, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+			return derp.Wrap(err, location, "Unable to unmarshal XML Response", err, string(body), result, t.errorReport(), derp.WithInternalError())
 		}
 
 		return nil
@@ -147,7 +147,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.Wrap(err, location, "Unable to unmarshal JSON Response", err, string(body), result, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+			return derp.Wrap(err, location, "Unable to unmarshal JSON Response", err, string(body), result, t.errorReport(), derp.WithInternalError())
 		}
 
 		return nil

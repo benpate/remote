@@ -247,7 +247,7 @@ func (t *Transaction) Send() error {
 		t.response, err = t.client.Do(t.request)
 
 		if err != nil {
-			return derp.Wrap(err, location, "Unable to execute HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+			return derp.Wrap(err, location, "Unable to execute HTTP request", t.errorReport(), derp.WithInternalError())
 		}
 	}
 
@@ -281,7 +281,7 @@ func (t *Transaction) Send() error {
 	// Fall through to here means that this is a successful response.
 	// Decode the response body into the success object.
 	if err := t.decodeResponseBody(body, t.success); err != nil {
-		return derp.Wrap(err, location, "Unable to process response body", err, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+		return derp.Wrap(err, location, "Unable to process response body", err, t.errorReport(), derp.WithInternalError())
 	}
 
 	// Glorious success.
@@ -305,7 +305,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 		body, err := t.RequestBody()
 
 		if err != nil {
-			return nil, derp.Wrap(err, location, "Unable to create Request Body", t.body, t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+			return nil, derp.Wrap(err, location, "Unable to create Request Body", t.body, t.errorReport(), derp.WithInternalError())
 		}
 
 		bodyReader = bytes.NewReader(body)
@@ -315,7 +315,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	result, err := http.NewRequest(t.method, t.RequestURL(), bodyReader)
 
 	if err != nil {
-		return nil, derp.Wrap(err, location, "Unable to create HTTP request", t.errorReport(), derp.WithCode(http.StatusInternalServerError))
+		return nil, derp.Wrap(err, location, "Unable to create HTTP request", t.errorReport(), derp.WithInternalError())
 	}
 
 	// Add headers to httpRequest
