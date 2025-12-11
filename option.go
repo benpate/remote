@@ -31,7 +31,7 @@ func (t *Transaction) onBeforeRequest() error {
 	for _, option := range t.options {
 		if option.BeforeRequest != nil {
 			if err := option.BeforeRequest(t); err != nil {
-				return derp.Wrap(err, "remote.Send", "Error executing `config` option", t.errorReport())
+				return derp.Wrap(err, "remote.Send", "Error executing `config` option")
 			}
 		}
 	}
@@ -61,7 +61,7 @@ func (t *Transaction) onAfterRequest(response *http.Response) error {
 	for _, option := range t.options {
 		if option.AfterRequest != nil {
 			if err := option.AfterRequest(t, response); err != nil {
-				return derp.Wrap(err, "remote.Send", "Error executing `response` option", t.errorReport())
+				return derp.Wrap(err, "remote.Send", "Error executing `response` option")
 			}
 		}
 	}

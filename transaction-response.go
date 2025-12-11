@@ -59,16 +59,18 @@ func (t *Transaction) ResponseStatusCode() int {
 // multiple times without error.
 func (t *Transaction) ResponseBody() ([]byte, error) {
 
+	const location = "remote.Transaction.ResponseBody"
+
 	// Guard against NPE
 	if t.response == nil {
-		return []byte{}, derp.InternalError("remote.Transaction.ResponseBytes", "Response object is nil", t.errorReport())
+		return []byte{}, derp.InternalError(location, "Response object is nil")
 	}
 
 	// Read the original response body
 	originalBytes, err := io.ReadAll(t.response.Body)
 
 	if err != nil {
-		return []byte{}, derp.Wrap(err, "remote.Transaction.ResponseBytes", "Unable to read response body")
+		return []byte{}, derp.Wrap(err, location, "Unable to read response body")
 	}
 
 	// Replace the (now used up) Body reader
@@ -102,7 +104,9 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 	case io.Writer:
 		if _, err := result.Write(body); err != nil {
-			return derp.Wrap(err, location, "Unable to write response body to io.Writer", result)
+			err = derp.WrapHTTPError(err, t.request, t.response)
+			err = derp.Wrap(err, location, "Unable to write response body to io.Writer", result, derp.WithInternalError())
+			return err
 		}
 		return nil
 
@@ -122,7 +126,10 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	switch contentType {
 
 	case ContentTypePlain, ContentTypeHTML:
-		return derp.InternalError(location, "HTML must be read into an io.Writer, *string, or *byte[]", result)
+		var err error
+		err = derp.NewHTTPError(t.request, t.response)
+		err = derp.Wrap(err, location, "HTML must be read into an io.Writer, *string, or *byte[]", result)
+		return err
 
 	case
 		ContentTypeXML,
@@ -132,7 +139,9 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
-			return derp.Wrap(err, location, "Unable to unmarshal XML Response", err, string(body), result, t.errorReport(), derp.WithInternalError())
+			err = derp.WrapHTTPError(err, t.request, t.response)
+			err = derp.Wrap(err, location, "Unable to unmarshal XML Response", string(body), result, derp.WithInternalError())
+			return err
 		}
 
 		return nil
@@ -147,12 +156,14 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
-			return derp.Wrap(err, location, "Unable to unmarshal JSON Response", err, string(body), result, t.errorReport(), derp.WithInternalError())
+			err = derp.WrapHTTPError(err, t.request, t.response)
+			err = derp.Wrap(err, location, "Unable to unmarshal JSON Response", string(body), result, derp.WithInternalError())
+			return err
 		}
 
 		return nil
 	}
 
 	// If we're here, it means we don't know how to unmarshal the response body.
-	return derp.InternalError(location, "Unsupported Content-Type", contentType, t.errorReport())
+	return derp.InternalError(location, "Unsupported Content-Type", contentType, derp.WithInternalError())
 }

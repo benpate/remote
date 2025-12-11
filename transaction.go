@@ -211,7 +211,7 @@ func (t *Transaction) Send() error {
 
 	// Assemble the HTTP request from the transaction data
 	if request, err := t.assembleRequest(); err != nil {
-		return derp.Wrap(err, location, "Unable to create HTTP request", t.errorReport())
+		return derp.Wrap(err, location, "Unable to create HTTP request")
 	} else {
 		t.request = request
 	}
@@ -235,7 +235,7 @@ func (t *Transaction) Send() error {
 
 		// Send it to the queue
 		if err := t.queue.Publish(task); err != nil {
-			return derp.Wrap(err, location, "Unable to send transaction to queue", task)
+			return derp.Wrap(err, location, "Unable to send transaction to queue", task, derp.WithInternalError())
 		}
 
 		return nil
@@ -247,41 +247,50 @@ func (t *Transaction) Send() error {
 		t.response, err = t.client.Do(t.request)
 
 		if err != nil {
-			return derp.Wrap(err, location, "Unable to execute HTTP request", t.errorReport(), derp.WithInternalError())
+			err = derp.WrapHTTPError(err, t.request, t.response)
+			err = derp.Wrap(err, location, "Unable to execute HTTP request", derp.WithInternalError())
+			return err
 		}
 	}
 
 	// onAfterRequest modifies the response received from the server.
 	if err := t.onAfterRequest(t.response); err != nil {
-		return derp.Wrap(err, location, "Unable to execute options.Response", t.errorReport())
+		err = derp.WrapHTTPError(err, t.request, t.response)
+		err = derp.Wrap(err, location, "Unable to execute options.Response", derp.WithInternalError())
+		return err
 	}
 
 	// read the body of the response
 	body, err := t.ResponseBody()
-	statusCode := t.statusCode()
 
 	if err != nil {
-		return derp.Wrap(err, location, "Unable to read response body", t.errorReport(), t.response, derp.WithCode(statusCode))
+		err = derp.WrapHTTPError(err, t.request, t.response)
+		err = derp.Wrap(err, location, "Unable to read response body", derp.WithInternalError())
+		return err
 	}
 
 	// If Response Code is NOT "OK", then handle the error
-	if (statusCode < 200) || (statusCode > 299) {
+	if statusCode := t.statusCode(); (statusCode < 200) || (statusCode > 299) {
 
 		// Try to decode the response body into the failure object
 		if t.failure != nil {
 			if err := t.decodeResponseBody(body, t.failure); err != nil {
-				return derp.Wrap(err, location, "Unable to parse error response", err, body, derp.WithCode(statusCode))
+				err = derp.WrapHTTPError(err, t.request, t.response)
+				err = derp.Wrap(err, location, "Unable to parse error response", body, derp.WithInternalError())
+				return err
 			}
 		}
 
 		// Return the error to the caller
-		return derp.InternalError(location, "Remote service returned an error", t.errorReport(), derp.WithCode(statusCode))
+		return derp.NewHTTPError(t.request, t.response)
 	}
 
 	// Fall through to here means that this is a successful response.
 	// Decode the response body into the success object.
 	if err := t.decodeResponseBody(body, t.success); err != nil {
-		return derp.Wrap(err, location, "Unable to process response body", err, t.errorReport(), derp.WithInternalError())
+		err = derp.WrapHTTPError(err, t.request, t.response)
+		err = derp.Wrap(err, location, "Unable to process response body", body, derp.WithInternalError())
+		return err
 	}
 
 	// Glorious success.
@@ -305,7 +314,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 		body, err := t.RequestBody()
 
 		if err != nil {
-			return nil, derp.Wrap(err, location, "Unable to create Request Body", t.body, t.errorReport(), derp.WithInternalError())
+			return nil, derp.Wrap(err, location, "Unable to create Request Body", t.body, derp.WithInternalError())
 		}
 
 		bodyReader = bytes.NewReader(body)
@@ -315,7 +324,7 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	result, err := http.NewRequest(t.method, t.RequestURL(), bodyReader)
 
 	if err != nil {
-		return nil, derp.Wrap(err, location, "Unable to create HTTP request", t.errorReport(), derp.WithInternalError())
+		return nil, derp.Wrap(err, location, "Unable to create HTTP request", derp.WithInternalError())
 	}
 
 	// Add headers to httpRequest
@@ -377,6 +386,7 @@ func (t *Transaction) statusCode() int {
 	return 0
 }
 
+/*
 // ErrorReport generates a data dump of the current state of the HTTP transaction.
 // This is used when reporting errors via derp, to provide insights into what went wrong.
 func (t *Transaction) errorReport() ErrorReport {
@@ -403,3 +413,4 @@ func (t *Transaction) errorReport() ErrorReport {
 
 	return result
 }
+*/
