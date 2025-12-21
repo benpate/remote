@@ -128,7 +128,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	case ContentTypePlain, ContentTypeHTML:
 		var err error
 		err = derp.NewHTTPError(t.request, t.response)
-		err = derp.Wrap(err, location, "HTML must be read into an io.Writer, *string, or *byte[]", body, result, derp.WithInternalError())
+		err = derp.Wrap(err, location, "HTML must be read into an io.Writer, *string, or *byte[]", string(body), result, derp.WithInternalError())
 		return err
 
 	case
