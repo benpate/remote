@@ -202,8 +202,6 @@ func (t *Transaction) Send() error {
 
 	const location = "remote.Transaction.Send"
 
-	var err error
-
 	// onBeforeRequest modifies the transaction before an http.Request is created
 	if err := t.onBeforeRequest(); err != nil {
 		return err
@@ -217,9 +215,7 @@ func (t *Transaction) Send() error {
 	}
 
 	// Execute options.ModifyRequest
-	replacedResponse := t.onModifyRequest(t.request)
-
-	switch {
+	switch replacedResponse := t.onModifyRequest(t.request); {
 
 	// If the response has been replaced,
 	// then use it and DON'T send the request.
@@ -242,6 +238,8 @@ func (t *Transaction) Send() error {
 
 	// Otherwise, send the request to the remote server.
 	default:
+
+		var err error
 
 		// Executing request using HTTP client
 		t.response, err = t.client.Do(t.request)
