@@ -12,25 +12,25 @@ import (
 
 func TestRequestMethods(t *testing.T) {
 
-	get := Get("someurl.com")
-	require.Equal(t, "GET", get.method)
-	require.Equal(t, "someurl.com", get.url)
+	getTxn := Get("someurl.com")
+	require.Equal(t, "GET", getTxn.method)
+	require.Equal(t, "someurl.com", getTxn.url)
 
-	post := Post("someurl.com")
-	require.Equal(t, "POST", post.method)
-	require.Equal(t, "someurl.com", post.url)
+	postTxn := Post("someurl.com")
+	require.Equal(t, "POST", postTxn.method)
+	require.Equal(t, "someurl.com", postTxn.url)
 
-	put := Put("someurl.com")
-	require.Equal(t, "PUT", put.method)
-	require.Equal(t, "someurl.com", put.url)
+	putTxn := Put("someurl.com")
+	require.Equal(t, "PUT", putTxn.method)
+	require.Equal(t, "someurl.com", putTxn.url)
 
-	patch := Patch("someurl.com")
-	require.Equal(t, "PATCH", patch.method)
-	require.Equal(t, "someurl.com", patch.url)
+	patchTxn := Patch("someurl.com")
+	require.Equal(t, "PATCH", patchTxn.method)
+	require.Equal(t, "someurl.com", patchTxn.url)
 
-	delete := Delete("someurl.com")
-	require.Equal(t, "DELETE", delete.method)
-	require.Equal(t, "someurl.com", delete.url)
+	deleteTxn := Delete("someurl.com")
+	require.Equal(t, "DELETE", deleteTxn.method)
+	require.Equal(t, "someurl.com", deleteTxn.url)
 }
 
 func TestGet(t *testing.T) {

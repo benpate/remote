@@ -54,7 +54,7 @@ func (t *Transaction) ResponseStatusCode() int {
 	return t.response.StatusCode
 }
 
-// ResponseBytes returns the original response body, as a byte array.
+// ResponseBody returns the original response body, as a byte array.
 // This method replaces the original body reader, meaning that it can be called
 // multiple times without error.
 func (t *Transaction) ResponseBody() ([]byte, error) {
@@ -80,6 +80,7 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 	return originalBytes, nil
 }
 
+// ResponseBodyReader returns an io.Reader for the response body.
 func (t *Transaction) ResponseBodyReader() io.Reader {
 
 	if body, err := t.ResponseBody(); err == nil {

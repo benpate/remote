@@ -32,13 +32,13 @@ type Transaction struct {
  * Chaining API methods
  ******************************************/
 
-// Get assigns the HTTP method for this transaction.
+// Method assigns the HTTP method for this transaction.
 func (t *Transaction) Method(method string) *Transaction {
 	t.method = method
 	return t
 }
 
-// Get assigns the URL for this transaction.
+// URL assigns the URL for this transaction.
 func (t *Transaction) URL(url string) *Transaction {
 	t.url = url
 	return t
@@ -119,6 +119,7 @@ func (t *Transaction) ContentType(value string) *Transaction {
 	return t.Header(ContentType, value)
 }
 
+// UserAgent sets the User-Agent header of the HTTP request.
 func (t *Transaction) UserAgent(value string) *Transaction {
 	return t.Header(UserAgent, value)
 }
@@ -200,11 +201,13 @@ func (t *Transaction) Send() error {
 	}
 
 	// Assemble the HTTP request from the transaction data
-	if request, err := t.assembleRequest(); err != nil {
+	request, err := t.assembleRequest()
+
+	if err != nil {
 		return derp.Wrap(err, location, "Unable to create HTTP request")
-	} else {
-		t.request = request
 	}
+
+	t.request = request
 
 	// Execute options.ModifyRequest
 	switch replacedResponse := t.onModifyRequest(t.request); {

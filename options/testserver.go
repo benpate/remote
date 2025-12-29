@@ -30,7 +30,7 @@ func TestServer(hostname string, filesystem fs.FS) remote.Option {
 	// Generate the actual option
 	return remote.Option{
 
-		ModifyRequest: func(transaction *remote.Transaction, request *http.Request) *http.Response {
+		ModifyRequest: func(_ *remote.Transaction, request *http.Request) *http.Response {
 
 			// Only match requests for the specified hostname
 			if request.URL.Hostname() != hostname {

@@ -7,6 +7,7 @@ import (
 	"github.com/benpate/derp"
 )
 
+// RequestURL returns the full URL for this request, including query string parameters.
 func (t *Transaction) RequestURL() string {
 	result := t.url
 

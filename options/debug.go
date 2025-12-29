@@ -14,7 +14,7 @@ func Debug() remote.Option {
 
 	return remote.Option{
 
-		ModifyRequest: func(transaction *remote.Transaction, request *http.Request) *http.Response {
+		ModifyRequest: func(_ *remote.Transaction, request *http.Request) *http.Response {
 
 			content, err := httputil.DumpRequestOut(request, true)
 
@@ -31,7 +31,7 @@ func Debug() remote.Option {
 			return nil
 		},
 
-		AfterRequest: func(transaction *remote.Transaction, response *http.Response) error {
+		AfterRequest: func(_ *remote.Transaction, response *http.Response) error {
 
 			fmt.Println("")
 			fmt.Println("Begin HTTP Response ----------------------")

@@ -4,6 +4,7 @@ import (
 	"net/url"
 )
 
+// New returns a fully initialized Transaction object with default settings.
 func New() *Transaction {
 
 	t := &Transaction{
