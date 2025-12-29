@@ -51,6 +51,3 @@ const contentTypeNonStandardXMLText = "text/xml"
 
 // contentTypeNonStandardJSONText is a non-standard MIME Type that might be used by other systems for JSON content
 const contentTypeNonStandardJSONText = "text/json"
-
-// queueTransactionName is the name used when sending transactions to a turbine queue
-const queueTransactionName = "remote.Transaction.Send"
