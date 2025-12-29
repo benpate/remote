@@ -10,25 +10,22 @@ import (
 	"strings"
 
 	"github.com/benpate/derp"
-	"github.com/benpate/turbine/queue"
 )
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
-	client       *http.Client       // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
-	method       string             // HTTP method to use when sending the request
-	url          string             // URL of the remote server to call
-	header       map[string]string  // HTTP Header values to send in the request
-	query        url.Values         // Query String to append to the URL
-	form         url.Values         // (if set) Form data to pass to the remote server as x-www-form-urlencoded
-	body         any                // Other data to send in the body.  Encoding determined by header["Content-Type"]
-	success      any                // Object to parse the response into -- IF the status code is successful
-	failure      any                // Object to parse the response into -- IF the status code is NOT successful
-	options      []Option           // options to execute on the request/response
-	request      *http.Request      // HTTP request that is delivered to the remote server
-	response     *http.Response     // HTTP response that is returned from the remote server
-	queue        *queue.Queue       // (optional) Queue to use for sending transactions
-	queueOptions []queue.TaskOption // (optional) Options to use when sending transactions to the queue
+	client   *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
+	method   string            // HTTP method to use when sending the request
+	url      string            // URL of the remote server to call
+	header   map[string]string // HTTP Header values to send in the request
+	query    url.Values        // Query String to append to the URL
+	form     url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
+	body     any               // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	success  any               // Object to parse the response into -- IF the status code is successful
+	failure  any               // Object to parse the response into -- IF the status code is NOT successful
+	options  []Option          // options to execute on the request/response
+	request  *http.Request     // HTTP request that is delivered to the remote server
+	response *http.Response    // HTTP response that is returned from the remote server
 }
 
 /******************************************
@@ -168,14 +165,9 @@ func (t *Transaction) XML(value any) *Transaction {
 	return t
 }
 
+// isContentTypeEmpty returns true if the Content-Type header has not been set.
 func (t *Transaction) isContentTypeEmpty() bool {
 	return t.header[ContentType] == ""
-}
-
-func (t *Transaction) Queue(queue *queue.Queue, options ...queue.TaskOption) *Transaction {
-	t.queue = queue
-	t.queueOptions = options
-	return t
 }
 
 // With lets you add remote.Options to the transaction. Options modify
@@ -221,20 +213,6 @@ func (t *Transaction) Send() error {
 	// then use it and DON'T send the request.
 	case replacedResponse != nil:
 		t.response = replacedResponse
-
-	// If a queue has been provided, DON'T use HTTP
-	// and send the transaction to the queue instead.
-	case t.queue != nil:
-
-		// Serialize the Transaction
-		task := queue.NewTask(queueTransactionName, t.MarshalMap(), t.queueOptions...)
-
-		// Send it to the queue
-		if err := t.queue.Publish(task); err != nil {
-			return derp.Wrap(err, location, "Unable to send transaction to queue", task, derp.WithInternalError())
-		}
-
-		return nil
 
 	// Otherwise, send the request to the remote server.
 	default:
