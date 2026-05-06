@@ -68,3 +68,18 @@ func (t *Transaction) onAfterRequest(response *http.Response) error {
 
 	return nil
 }
+
+// Options extracts valid remote.Option values from a list of `any` values.
+func Options(values ...any) []Option {
+
+	result := make([]Option, 0, len(values))
+
+	for _, value := range values {
+
+		if option, isRemoteOption := value.(Option); isRemoteOption {
+			result = append(result, option)
+		}
+	}
+
+	return result
+}
