@@ -337,14 +337,14 @@ func (t *Transaction) assembleBearCap() error {
 		uri := values.Get("u")
 
 		if uri == "" {
-			return derp.InternalError(location, "BearCap URL is required", t.url)
+			return derp.Internal(location, "BearCap URL is required", t.url)
 		}
 
 		// Validate the "t" parameter is present
 		token := values.Get("t")
 
 		if token == "" {
-			return derp.InternalError(location, "BearCap Token is required", t.url)
+			return derp.Internal(location, "BearCap Token is required", t.url)
 		}
 
 		// Set the correct values in the transaction.

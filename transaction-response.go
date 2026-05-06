@@ -63,7 +63,7 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 
 	// Guard against NPE
 	if t.response == nil {
-		return []byte{}, derp.InternalError(location, "Response object is nil")
+		return []byte{}, derp.Internal(location, "Response object is nil")
 	}
 
 	// Read the original response body
@@ -166,5 +166,5 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	}
 
 	// If we're here, it means we don't know how to unmarshal the response body.
-	return derp.InternalError(location, "Unsupported Content-Type", contentType, derp.WithInternalError())
+	return derp.Internal(location, "Unsupported Content-Type", contentType, derp.WithInternalError())
 }
