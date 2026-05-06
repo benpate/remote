@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/benpate/derp"
+	"github.com/benpate/uri"
 )
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
@@ -282,8 +283,14 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 
 	var bodyReader io.Reader
 
+	// Assemble BearCap URLs, if needed.
 	if err := t.assembleBearCap(); err != nil {
 		return nil, derp.Wrap(err, location, "Unable to assemble BearCap")
+	}
+
+	// Validate the URL before we try to send a request.
+	if err := uri.ValidateURL(t.url); err != nil {
+		return nil, derp.Wrap(err, location, "Invalid URL", t.url, derp.WithInternalError())
 	}
 
 	// GET methods don't have an HTTP Body.  For all other methods,
