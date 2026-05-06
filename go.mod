@@ -3,7 +3,7 @@ module github.com/benpate/remote
 go 1.24.0
 
 require (
-	github.com/benpate/derp v0.34.2
+	github.com/benpate/derp v0.35.0
 	github.com/benpate/rosetta v0.25.26
 	github.com/stretchr/testify v1.11.1
 )
