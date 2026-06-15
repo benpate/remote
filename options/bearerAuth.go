@@ -4,7 +4,7 @@ import (
 	"github.com/benpate/remote"
 )
 
-// BearerAuth is a remote.Option that sets the Authorization HTTP header witha for Bearer token
+// BearerAuth is a remote.Option that sets the Authorization HTTP header for a Bearer token
 func BearerAuth(accessToken string) remote.Option {
 	return remote.Option{
 

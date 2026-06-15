@@ -1,4 +1,3 @@
-// Package remote provides a simple and clean API for making HTTP requests to remote servers.
 package remote
 
 // Accept is the string used in the HTTP header to request a response be encoded as a MIME type

@@ -19,8 +19,8 @@ func TestOption(t *testing.T) {
 
 	server := echoBodyServer()
 
-	// nolint:errcheck // just a test
-	Get(server.URL).AllowPrivateIPs(true).With(middleware).Send()
+	// The response is irrelevant; this test only exercises the option plumbing.
+	_ = Get(server.URL).AllowPrivateIPs(true).With(middleware).Send()
 }
 
 func TestOptionErrors(t *testing.T) {

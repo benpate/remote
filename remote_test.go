@@ -94,9 +94,7 @@ func echoBodyServer() *httptest.Server {
 		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
 
 		body := new(bytes.Buffer)
-		// nolint:errcheck // just a test
-		body.ReadFrom(r.Body)
-		// nolint:errcheck // just a test
-		w.Write(body.Bytes())
+		_, _ = body.ReadFrom(r.Body)
+		_, _ = w.Write(body.Bytes())
 	}))
 }

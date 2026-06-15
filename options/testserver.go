@@ -2,6 +2,7 @@ package options
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"io/fs"
 	"net/http"
@@ -49,11 +50,28 @@ func TestServer(hostname string, filesystem fs.FS) remote.Option {
 			response, err := http.ReadResponse(bufio.NewReader(file), request)
 
 			if err != nil {
+				_ = file.Close()
 				return errorResponse(request, err)
 			}
+
+			// Tie the file's lifetime to the response body so it is closed when
+			// the caller closes the body.
+			response.Body = fileBackedBody{ReadCloser: response.Body, file: file}
 
 			// I see this as a complete success!
 			return response
 		},
 	}
+}
+
+// fileBackedBody closes the backing file when the response body is closed, so a
+// file opened to serve a mocked response is not leaked.
+type fileBackedBody struct {
+	io.ReadCloser
+	file fs.File
+}
+
+// Close closes both the response body and the file backing it.
+func (b fileBackedBody) Close() error {
+	return errors.Join(b.ReadCloser.Close(), b.file.Close())
 }

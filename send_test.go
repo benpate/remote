@@ -16,8 +16,7 @@ func jsonServer(statusCode int, body string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set(ContentType, ContentTypeJSON)
 		w.WriteHeader(statusCode)
-		// nolint:errcheck
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	}))
 }
 
@@ -63,8 +62,7 @@ func TestSend_ErrorStatusBadFailureBody(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set(ContentType, ContentTypeJSON)
 		w.WriteHeader(400)
-		// nolint:errcheck
-		w.Write([]byte("not json"))
+		_, _ = w.Write([]byte("not json"))
 	}))
 	defer ts.Close()
 
@@ -156,8 +154,7 @@ func TestSend_PostFormRoundTrip(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedContentType = r.Header.Get(ContentType)
 		buf := make([]byte, r.ContentLength)
-		// nolint:errcheck
-		r.Body.Read(buf)
+		_, _ = r.Body.Read(buf)
 		receivedBody = string(buf)
 		w.WriteHeader(200)
 	}))

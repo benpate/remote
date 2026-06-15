@@ -483,7 +483,7 @@ func (t *Transaction) assembleBearCap() error {
 	// BearCap URLs are special.  They are used to pass a token to a remote server
 	if strings.HasPrefix(t.url, "bear:?") {
 
-		// Splie the URL into the bearcap "protocol" and the query string
+		// Split the URL into the bearcap "protocol" and the query string
 		_, queryString, _ := strings.Cut(t.url, "?")
 
 		values, err := url.ParseQuery(queryString)
@@ -493,9 +493,9 @@ func (t *Transaction) assembleBearCap() error {
 		}
 
 		// Validate the "u" parameter is present
-		uri := values.Get("u")
+		target := values.Get("u")
 
-		if uri == "" {
+		if target == "" {
 			return derp.Internal(location, "BearCap URL is required", t.url)
 		}
 
@@ -507,7 +507,7 @@ func (t *Transaction) assembleBearCap() error {
 		}
 
 		// Set the correct values in the transaction.
-		t.url = uri
+		t.url = target
 		t.header["Authorization"] = "Bearer " + token
 	}
 

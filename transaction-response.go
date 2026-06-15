@@ -104,10 +104,10 @@ func (t *Transaction) ResponseBodyReader() io.Reader {
 	return bytes.NewReader([]byte{})
 }
 
-// readResponseBody unmarshalls the response body into the result
+// decodeResponseBody unmarshals the response body into the result object.
 func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
-	const location = "remote.Transaction.readResponseBody"
+	const location = "remote.Transaction.decodeResponseBody"
 
 	// If we don't actually have a result (common for error documents) then there's nothing to do.
 	if result == nil {

@@ -16,7 +16,7 @@ func FuzzTransactionUnmarshalJSON(f *testing.F) {
 	f.Add([]byte(`not json`))
 	f.Add([]byte(`{"query":"a=1&b=2"}`))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		tx := New()
 		_ = json.Unmarshal(data, tx)
 	})
@@ -32,7 +32,7 @@ func FuzzAssembleBearCap(f *testing.F) {
 	f.Add("http://normal.com")
 	f.Add("bear:?%zz")
 
-	f.Fuzz(func(t *testing.T, url string) {
+	f.Fuzz(func(_ *testing.T, url string) {
 		tx := Get(url)
 		_ = tx.assembleBearCap()
 	})

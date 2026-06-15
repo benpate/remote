@@ -25,13 +25,15 @@ type Option struct {
 	AfterRequest func(*Transaction, *http.Response) error
 }
 
-// onBeforeRequest executes all "BeforeRequest" option for a transaction.
-// It returns an error if any option returns a non-nil response.
+// onBeforeRequest runs each option's BeforeRequest hook, returning the first error.
 func (t *Transaction) onBeforeRequest() error {
+
+	const location = "remote.Transaction.onBeforeRequest"
+
 	for _, option := range t.options {
 		if option.BeforeRequest != nil {
 			if err := option.BeforeRequest(t); err != nil {
-				return derp.Wrap(err, "remote.Send", "Error executing `config` option")
+				return derp.Wrap(err, location, "Error executing BeforeRequest option")
 			}
 		}
 	}
@@ -39,8 +41,8 @@ func (t *Transaction) onBeforeRequest() error {
 	return nil
 }
 
-// onModifyRequest executes all "ModifyRequest" option for a transaction.
-// It returns a new http.Response if any option returns a non-nil response.
+// onModifyRequest runs each option's ModifyRequest hook, returning the first
+// non-nil response (which replaces the call to the remote server).
 func (t *Transaction) onModifyRequest(request *http.Request) *http.Response {
 
 	for _, option := range t.options {
@@ -54,14 +56,15 @@ func (t *Transaction) onModifyRequest(request *http.Request) *http.Response {
 	return nil
 }
 
-// onAfterRequest executes all "AfterRequest" option for a transaction.
-// It returns an error if any option returns a non-nil error.
+// onAfterRequest runs each option's AfterRequest hook, returning the first error.
 func (t *Transaction) onAfterRequest(response *http.Response) error {
+
+	const location = "remote.Transaction.onAfterRequest"
 
 	for _, option := range t.options {
 		if option.AfterRequest != nil {
 			if err := option.AfterRequest(t, response); err != nil {
-				return derp.Wrap(err, "remote.Send", "Error executing `response` option")
+				return derp.Wrap(err, location, "Error executing AfterRequest option")
 			}
 		}
 	}

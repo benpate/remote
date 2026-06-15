@@ -8,7 +8,7 @@ import (
 	"github.com/benpate/rosetta/convert"
 )
 
-// MarshalJSON implements the json.Marhsaller interface,
+// MarshalJSON implements the json.Marshaler interface,
 // which writes the Transaction object to a JSON string.
 func (t *Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.MarshalMap())
@@ -36,10 +36,18 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 // MarshalMap converts a Transaction object into a map[string]any
 func (t *Transaction) MarshalMap() map[string]any {
 
+	const location = "remote.Transaction.MarshalMap"
+
 	var body []byte
 
 	if t.method != http.MethodGet {
-		body, _ = t.RequestBody()
+
+		var err error
+		body, err = t.RequestBody()
+
+		if err != nil {
+			derp.Report(derp.Wrap(err, location, "Error reading request body"))
+		}
 	}
 
 	result := map[string]any{
