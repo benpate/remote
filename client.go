@@ -37,7 +37,11 @@ func newGuardedTransport() *http.Transport {
 		transport = &http.Transport{}
 	}
 
-	dialer := &net.Dialer{Timeout: defaultTimeout, KeepAlive: 30 * time.Second}
+	dialer := &net.Dialer{
+		Timeout:   defaultTimeout,
+		KeepAlive: 30 * time.Second,
+	}
+
 	transport.DialContext = guardedDialContext(dialer.DialContext)
 
 	return transport
@@ -104,6 +108,7 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 
 	const location = "remote.publicIPs"
 
+	// If host is an IP literal, parse and check it directly without DNS resolution.
 	if ip := net.ParseIP(host); ip != nil {
 		if !uri.IsPublicIP(ip) {
 			return nil, derp.BadRequest(location, "Blocked connection to non-public address (1)", ip)
@@ -111,6 +116,7 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 		return []net.IP{ip}, nil
 	}
 
+	// Otherwise resolve the host and check every candidate address.
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 
 	if err != nil {
@@ -121,6 +127,7 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 		return nil, derp.BadRequest(location, "No addresses found for host", host)
 	}
 
+	// Check every resolved address for being public, and collect the valid ones.
 	ips := make([]net.IP, 0, len(addrs))
 
 	for _, addr := range addrs {
@@ -130,5 +137,6 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 		ips = append(ips, addr.IP)
 	}
 
+	// All addresses are public, so return the list of IPs.
 	return ips, nil
 }
