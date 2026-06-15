@@ -27,7 +27,13 @@ func (t *Transaction) RequestBody() ([]byte, error) {
 	switch typedValue := t.body.(type) {
 
 	case io.Reader:
-		return io.ReadAll(typedValue)
+		result, err := io.ReadAll(typedValue)
+
+		if err != nil {
+			return nil, derp.Wrap(err, location, "Reading request body from io.Reader")
+		}
+
+		return result, nil
 
 	case string:
 		return []byte(typedValue), nil
