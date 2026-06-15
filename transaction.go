@@ -257,32 +257,14 @@ func (t *Transaction) Send() error {
 	request, err := t.assembleRequest(ctx)
 
 	if err != nil {
-		return derp.Wrap(err, location, "Unable to create HTTP request")
+		return derp.Wrap(err, location, "Creating HTTP request")
 	}
 
 	t.request = request
 
-	// Execute options.ModifyRequest
-	switch replacedResponse := t.onModifyRequest(t.request); {
-
-	// If the response has been replaced,
-	// then use it and DON'T send the request.
-	case replacedResponse != nil:
-		t.response = replacedResponse
-
-	// Otherwise, send the request to the remote server.
-	default:
-
-		var err error
-
-		// Executing request using the assembled HTTP client
-		t.response, err = t.buildClient().Do(t.request)
-
-		if err != nil {
-			err = derp.WrapHTTPError(err, t.request, t.response)
-			err = derp.Wrap(err, location, "Unable to execute HTTP request", derp.WithInternalError())
-			return err
-		}
+	// Send the request (or use a response substituted by a ModifyRequest option).
+	if err := t.executeRequest(); err != nil {
+		return derp.Wrap(err, location, "Sending request")
 	}
 
 	// A response must exist past this point; guard so we never dereference a nil.
@@ -303,7 +285,7 @@ func (t *Transaction) Send() error {
 	// onAfterRequest modifies the response received from the server.
 	if err := t.onAfterRequest(t.response); err != nil {
 		err = derp.WrapHTTPError(err, t.request, t.response)
-		err = derp.Wrap(err, location, "Unable to execute options.Response", derp.WithInternalError())
+		err = derp.Wrap(err, location, "Building options.Response", derp.WithInternalError())
 		return err
 	}
 
@@ -312,35 +294,70 @@ func (t *Transaction) Send() error {
 
 	if err != nil {
 		err = derp.WrapHTTPError(err, t.request, t.response)
-		err = derp.Wrap(err, location, "Unable to read response body", derp.WithInternalError())
+		err = derp.Wrap(err, location, "Reading response body", derp.WithInternalError())
 		return err
 	}
 
-	// If Response Code is NOT "OK", then handle the error
-	if statusCode := t.statusCode(); (statusCode < 200) || (statusCode > 299) {
-
-		// Try to decode the response body into the failure object
-		if t.failure != nil {
-			if err := t.decodeResponseBody(body, t.failure); err != nil {
-				err = derp.WrapHTTPError(err, t.request, t.response)
-				err = derp.Wrap(err, location, "Unable to parse error response", body, derp.WithInternalError())
-				return err
-			}
-		}
-
-		// Return the error to the caller
-		return derp.NewHTTPError(t.request, t.response)
-	}
-
-	// Fall through to here means that this is a successful response.
-	// Decode the response body into the success object.
-	if err := t.decodeResponseBody(body, t.success); err != nil {
-		err = derp.WrapHTTPError(err, t.request, t.response)
-		err = derp.Wrap(err, location, "Unable to process response body", body, derp.WithInternalError())
-		return err
+	// Decode the response body into the success or failure object.
+	if err := t.processResponse(body); err != nil {
+		return derp.Wrap(err, location, "Processing response")
 	}
 
 	// Glorious success.
+	return nil
+}
+
+// processResponse decodes the (already-read) response body into the transaction's
+// success or failure object, based on the response status code. A non-2xx status
+// always yields an error.
+func (t *Transaction) processResponse(body []byte) error {
+
+	const location = "remote.Transaction.processResponse"
+
+	// A non-2xx status is an error; decode the body into the failure object if one is set.
+	if statusCode := t.statusCode(); (statusCode < 200) || (statusCode > 299) {
+
+		if t.failure != nil {
+			if err := t.decodeResponseBody(body, t.failure); err != nil {
+				err = derp.WrapHTTPError(err, t.request, t.response)
+				return derp.Wrap(err, location, "Parsing error response", body, derp.WithInternalError())
+			}
+		}
+
+		return derp.NewHTTPError(t.request, t.response)
+	}
+
+	// Otherwise this is a success; decode the body into the success object.
+	if err := t.decodeResponseBody(body, t.success); err != nil {
+		err = derp.WrapHTTPError(err, t.request, t.response)
+		return derp.Wrap(err, location, "Processing response body", body, derp.WithInternalError())
+	}
+
+	return nil
+}
+
+// executeRequest sends the assembled request to the remote server, storing the
+// result in t.response. A ModifyRequest option may substitute its own response,
+// in which case the network is not contacted.
+func (t *Transaction) executeRequest() error {
+
+	const location = "remote.Transaction.executeRequest"
+
+	// A ModifyRequest option may replace the response; if so, use it and skip the network.
+	if replacedResponse := t.onModifyRequest(t.request); replacedResponse != nil {
+		t.response = replacedResponse
+		return nil
+	}
+
+	// Otherwise, send the request to the remote server using the assembled client.
+	var err error
+	t.response, err = t.buildClient().Do(t.request)
+
+	if err != nil {
+		err = derp.WrapHTTPError(err, t.request, t.response)
+		return derp.Wrap(err, location, "Sending HTTP request", derp.WithInternalError())
+	}
+
 	return nil
 }
 
@@ -392,7 +409,7 @@ func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error
 
 	// Assemble BearCap URLs, if needed.
 	if err := t.assembleBearCap(); err != nil {
-		return nil, derp.Wrap(err, location, "Unable to assemble BearCap")
+		return nil, derp.Wrap(err, location, "Assembling BearCap", derp.WithInternalError())
 	}
 
 	// Validate the URL before we try to send a request.
@@ -412,7 +429,7 @@ func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error
 		body, err := t.RequestBody()
 
 		if err != nil {
-			return nil, derp.Wrap(err, location, "Unable to create Request Body", t.body, derp.WithInternalError())
+			return nil, derp.Wrap(err, location, "Creating Request Body", t.body, derp.WithInternalError())
 		}
 
 		bodyReader = bytes.NewReader(body)
@@ -422,7 +439,7 @@ func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error
 	result, err := http.NewRequestWithContext(ctx, t.method, t.RequestURL(), bodyReader)
 
 	if err != nil {
-		return nil, derp.Wrap(err, location, "Unable to create HTTP request", derp.WithInternalError())
+		return nil, derp.Wrap(err, location, "Creating HTTP request", derp.WithInternalError())
 	}
 
 	// Add headers to httpRequest
@@ -446,7 +463,7 @@ func (t *Transaction) validateAllowedHosts() error {
 	parsed, err := url.Parse(t.url)
 
 	if err != nil {
-		return derp.Wrap(err, location, "Invalid URL", t.url, derp.WithInternalError())
+		return derp.Wrap(err, location, "Parsing URL", t.url, derp.WithInternalError())
 	}
 
 	if slices.Contains(t.allowedHosts, strings.ToLower(parsed.Hostname())) {
@@ -507,7 +524,7 @@ func (t *Transaction) statusCode() int {
 	return 0
 }
 
-/*
+/* This is commented out in general, but is sometimes used in debugging.
 // ErrorReport generates a data dump of the current state of the HTTP transaction.
 // This is used when reporting errors via derp, to provide insights into what went wrong.
 func (t *Transaction) errorReport() ErrorReport {
