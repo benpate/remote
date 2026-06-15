@@ -285,6 +285,11 @@ func (t *Transaction) Send() error {
 		}
 	}
 
+	// A response must exist past this point; guard so we never dereference a nil.
+	if t.response == nil {
+		return derp.Internal(location, "No response received from server")
+	}
+
 	// Close the response body when we're done, to release the underlying
 	// connection. ResponseBody (below) buffers the body in memory and swaps in a
 	// re-readable NopCloser, so closing the original here does not prevent
