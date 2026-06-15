@@ -14,6 +14,10 @@ func TestDefaultClient_Timeout(t *testing.T) {
 	require.Equal(t, time.Minute, DefaultClient().Timeout)
 }
 
+func TestSafeClient_Timeout(t *testing.T) {
+	require.Equal(t, time.Minute, SafeClient().Timeout)
+}
+
 func TestSafeClient_BlocksInternalAddress(t *testing.T) {
 	// An httptest server listens on loopback; SafeClient's dialer must refuse to
 	// connect to it. This is the core SSRF protection, with no external network.

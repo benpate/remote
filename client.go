@@ -13,6 +13,9 @@ import (
 // maxRedirects caps how many redirects the SafeClient will follow.
 const maxRedirects = 5
 
+// defaultTimeout is the default time limit applied to a request and its dialer.
+const defaultTimeout = 1 * time.Minute
+
 // dialContextFunc matches the signature of net.Dialer.DialContext.
 type dialContextFunc func(ctx context.Context, network string, address string) (net.Conn, error)
 
@@ -20,7 +23,7 @@ type dialContextFunc func(ctx context.Context, network string, address string) (
 func DefaultClient() *http.Client {
 
 	return &http.Client{
-		Timeout: 1 * time.Minute,
+		Timeout: defaultTimeout,
 	}
 }
 
@@ -36,10 +39,10 @@ func SafeClient() *http.Client {
 // addresses that isPublic accepts.
 func newSafeClient(isPublic func(net.IP) bool) *http.Client {
 
-	baseDialer := &net.Dialer{Timeout: 10 * time.Second}
+	baseDialer := &net.Dialer{Timeout: defaultTimeout}
 
 	return &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: defaultTimeout,
 		Transport: &http.Transport{
 			DialContext: guardedDialContext(baseDialer.DialContext, isPublic),
 		},
@@ -70,7 +73,7 @@ func guardClient(client *http.Client, isPublic func(net.IP) bool) *http.Client {
 	// Preserve the transport's own dialer (or the standard default) and wrap it.
 	inner := transport.DialContext
 	if inner == nil {
-		inner = (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+		inner = (&net.Dialer{Timeout: defaultTimeout, KeepAlive: 30 * time.Second}).DialContext
 	}
 	transport.DialContext = guardedDialContext(inner, isPublic)
 
