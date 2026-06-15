@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -15,18 +16,20 @@ import (
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
-	client   *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
-	method   string            // HTTP method to use when sending the request
-	url      string            // URL of the remote server to call
-	header   map[string]string // HTTP Header values to send in the request
-	query    url.Values        // Query String to append to the URL
-	form     url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
-	body     any               // Other data to send in the body.  Encoding determined by header["Content-Type"]
-	success  any               // Object to parse the response into -- IF the status code is successful
-	failure  any               // Object to parse the response into -- IF the status code is NOT successful
-	options  []Option          // options to execute on the request/response
-	request  *http.Request     // HTTP request that is delivered to the remote server
-	response *http.Response    // HTTP response that is returned from the remote server
+	client          *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
+	method          string            // HTTP method to use when sending the request
+	url             string            // URL of the remote server to call
+	header          map[string]string // HTTP Header values to send in the request
+	query           url.Values        // Query String to append to the URL
+	form            url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
+	body            any               // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	success         any               // Object to parse the response into -- IF the status code is successful
+	failure         any               // Object to parse the response into -- IF the status code is NOT successful
+	options         []Option          // options to execute on the request/response
+	allowedHosts    []string          // (if set) request URL host must match one of these values
+	blockPrivateIPs bool              // if TRUE, refuse to connect to non-public (private/internal) IP addresses
+	request         *http.Request     // HTTP request that is delivered to the remote server
+	response        *http.Response    // HTTP response that is returned from the remote server
 }
 
 /******************************************
@@ -179,6 +182,28 @@ func (t *Transaction) With(options ...Option) *Transaction {
 	return t
 }
 
+// AllowHosts restricts this transaction to the named hosts. When set, Send
+// returns an error before contacting the server if the request URL's host is
+// not in the list. This guards against requests to unexpected servers, for
+// instance when the URL is user-supplied. Matching is case-insensitive.
+func (t *Transaction) AllowHosts(hosts ...string) *Transaction {
+	for _, host := range hosts {
+		t.allowedHosts = append(t.allowedHosts, strings.ToLower(host))
+	}
+	return t
+}
+
+// BlockPrivateIPs controls whether the transaction may connect to non-public IP
+// addresses. The default is FALSE (any address is allowed). When set to TRUE,
+// Send returns an error if the request (or any redirect) resolves to a
+// loopback, private, link-local, or other non-public address. This is the
+// dial-time protection used by SafeClient, applied to the transaction's
+// existing HTTP client.
+func (t *Transaction) BlockPrivateIPs(value bool) *Transaction {
+	t.blockPrivateIPs = value
+	return t
+}
+
 // Result sets the object for parsing HTTP success responses
 func (t *Transaction) Result(object any) *Transaction {
 	t.success = object
@@ -223,8 +248,14 @@ func (t *Transaction) Send() error {
 
 		var err error
 
+		// Use the configured client, optionally hardened to block non-public IPs.
+		client := t.client
+		if t.blockPrivateIPs {
+			client = guardClient(client, uri.IsPublicIP)
+		}
+
 		// Executing request using HTTP client
-		t.response, err = t.client.Do(t.request)
+		t.response, err = client.Do(t.request)
 
 		if err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
@@ -293,6 +324,11 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 		return nil, derp.Wrap(err, location, "Invalid URL", t.url, derp.WithInternalError())
 	}
 
+	// If an allow-list is set, confirm the (post-BearCap) host is permitted.
+	if err := t.validateAllowedHosts(); err != nil {
+		return nil, err
+	}
+
 	// GET methods don't have an HTTP Body.  For all other methods,
 	// it's time to defined the body content.
 	if t.method != http.MethodGet {
@@ -319,6 +355,29 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 	}
 
 	return result, nil
+}
+
+// validateAllowedHosts confirms that the request URL's host is in the
+// transaction's allow-list. An empty allow-list permits any host.
+func (t *Transaction) validateAllowedHosts() error {
+
+	const location = "remote.Transaction.validateAllowedHosts"
+
+	if len(t.allowedHosts) == 0 {
+		return nil
+	}
+
+	parsed, err := url.Parse(t.url)
+
+	if err != nil {
+		return derp.Wrap(err, location, "Invalid URL", t.url, derp.WithInternalError())
+	}
+
+	if slices.Contains(t.allowedHosts, strings.ToLower(parsed.Hostname())) {
+		return nil
+	}
+
+	return derp.Forbidden(location, "Host is not in the allow-list", parsed.Hostname())
 }
 
 // assembleBearCap pre-processes special bearer capability URLs.
