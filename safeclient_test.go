@@ -5,9 +5,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestDefaultClient_Timeout(t *testing.T) {
+	require.Equal(t, time.Minute, DefaultClient().Timeout)
+}
 
 func TestSafeClient_BlocksInternalAddress(t *testing.T) {
 	// An httptest server listens on loopback; SafeClient's dialer must refuse to

@@ -16,11 +16,11 @@ const maxRedirects = 5
 // dialContextFunc matches the signature of net.Dialer.DialContext.
 type dialContextFunc func(ctx context.Context, network string, address string) (net.Conn, error)
 
-// DefaultClient returns an HTTP client with a reasonable timeout.
+// DefaultClient returns an HTTP client with a reasonable (one-minute) timeout.
 func DefaultClient() *http.Client {
 
 	return &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 1 * time.Minute,
 	}
 }
 
