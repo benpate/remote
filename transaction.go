@@ -246,7 +246,7 @@ func (t *Transaction) Send() error {
 
 	// onBeforeRequest modifies the transaction before an http.Request is created
 	if err := t.onBeforeRequest(); err != nil {
-		return err
+		return derp.Wrap(err, location, "Error in BeforeRequest option")
 	}
 
 	// Resolve the request context (applying the default timeout if none was set).
@@ -397,7 +397,7 @@ func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error
 
 	// If an allow-list is set, confirm the (post-BearCap) host is permitted.
 	if err := t.validateAllowedHosts(); err != nil {
-		return nil, err
+		return nil, derp.Wrap(err, location, "Host is not allowed", t.url)
 	}
 
 	// GET methods don't have an HTTP Body.  For all other methods,

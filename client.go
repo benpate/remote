@@ -2,11 +2,11 @@ package remote
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/benpate/derp"
 	"github.com/benpate/uri"
 )
 
@@ -45,9 +45,13 @@ func newGuardedTransport() *http.Transport {
 
 // limitRedirects is the CheckRedirect policy that caps a redirect chain.
 func limitRedirects(_ *http.Request, via []*http.Request) error {
+
+	const location = "remote.limitRedirects"
+
 	if len(via) >= maxRedirects {
-		return errors.New("remote: too many redirects")
+		return derp.BadRequest(location, "Too many redirects")
 	}
+
 	return nil
 }
 
@@ -58,19 +62,21 @@ func limitRedirects(_ *http.Request, via []*http.Request) error {
 // address via DNS rebinding.
 func guardedDialContext(inner dialContextFunc) dialContextFunc {
 
+	const location = "remote.guardedDialContext"
+
 	return func(ctx context.Context, network string, address string) (net.Conn, error) {
 
 		host, port, err := net.SplitHostPort(address)
 
 		if err != nil {
-			return nil, err
+			return nil, derp.Wrap(err, location, "Invalid dial address", address)
 		}
 
 		// Resolve the host (or use the IP literal) and confirm every address is public.
 		ips, err := publicIPs(ctx, host)
 
 		if err != nil {
-			return nil, err
+			return nil, derp.Wrap(err, location, "Unable to validate host address", host)
 		}
 
 		// Dial a validated IP literal directly (rebinding-safe), trying each in turn.
@@ -87,7 +93,7 @@ func guardedDialContext(inner dialContextFunc) dialContextFunc {
 			return conn, nil
 		}
 
-		return nil, lastErr
+		return nil, derp.Wrap(lastErr, location, "Unable to connect to host", host)
 	}
 }
 
@@ -96,9 +102,11 @@ func guardedDialContext(inner dialContextFunc) dialContextFunc {
 // non-public address causes an error, so the caller never connects to it.
 func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 
+	const location = "remote.publicIPs"
+
 	if ip := net.ParseIP(host); ip != nil {
 		if !uri.IsPublicIP(ip) {
-			return nil, blockedAddressError(ip)
+			return nil, derp.BadRequest(location, "Blocked connection to non-public address (1)", ip)
 		}
 		return []net.IP{ip}, nil
 	}
@@ -106,27 +114,21 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 
 	if err != nil {
-		return nil, err
+		return nil, derp.Wrap(err, location, "Unable to resolve host", host)
 	}
 
 	if len(addrs) == 0 {
-		return nil, errors.New("remote: no addresses found for " + host)
+		return nil, derp.BadRequest(location, "No addresses found for host", host)
 	}
 
 	ips := make([]net.IP, 0, len(addrs))
 
 	for _, addr := range addrs {
 		if !uri.IsPublicIP(addr.IP) {
-			return nil, blockedAddressError(addr.IP)
+			return nil, derp.BadRequest(location, "Blocked connection to non-public address (2)", addr.IP)
 		}
 		ips = append(ips, addr.IP)
 	}
 
 	return ips, nil
-}
-
-// blockedAddressError returns the error used when a connection to a non-public
-// address is refused.
-func blockedAddressError(ip net.IP) error {
-	return errors.New("remote: blocked connection to non-public address " + ip.String())
 }
