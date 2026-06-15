@@ -8,13 +8,14 @@ import (
 func New() *Transaction {
 
 	t := &Transaction{
-		client:  DefaultClient(),
-		method:  "",
-		url:     "",
-		header:  map[string]string{},
-		query:   url.Values{},
-		form:    url.Values{},
-		options: []Option{},
+		client:          DefaultClient(),
+		method:          "",
+		url:             "",
+		header:          map[string]string{},
+		query:           url.Values{},
+		form:            url.Values{},
+		options:         []Option{},
+		maxResponseSize: defaultMaxResponseSize,
 	}
 
 	return t

@@ -28,6 +28,7 @@ type Transaction struct {
 	options         []Option          // options to execute on the request/response
 	allowedHosts    []string          // (if set) request URL host must match one of these values
 	blockPrivateIPs bool              // if TRUE, refuse to connect to non-public (private/internal) IP addresses
+	maxResponseSize int64             // maximum number of bytes to read from the response body
 	request         *http.Request     // HTTP request that is delivered to the remote server
 	response        *http.Response    // HTTP response that is returned from the remote server
 }
@@ -201,6 +202,15 @@ func (t *Transaction) AllowHosts(hosts ...string) *Transaction {
 // existing HTTP client.
 func (t *Transaction) BlockPrivateIPs(value bool) *Transaction {
 	t.blockPrivateIPs = value
+	return t
+}
+
+// MaxResponseSize sets the maximum number of bytes that will be read from the
+// response body. A response larger than this causes Send to return an error,
+// preventing an untrusted server from exhausting memory. The default is 1GB.
+// A value of zero or less restores the default.
+func (t *Transaction) MaxResponseSize(bytes int64) *Transaction {
+	t.maxResponseSize = bytes
 	return t
 }
 

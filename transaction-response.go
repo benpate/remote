@@ -54,6 +54,10 @@ func (t *Transaction) ResponseStatusCode() int {
 	return t.response.StatusCode
 }
 
+// defaultMaxResponseSize is the default cap (1GB) on how many bytes are read
+// from a response body, to prevent an untrusted server from exhausting memory.
+const defaultMaxResponseSize = 1 << 30
+
 // ResponseBody returns the original response body, as a byte array.
 // This method replaces the original body reader, meaning that it can be called
 // multiple times without error.
@@ -66,11 +70,21 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 		return []byte{}, derp.Internal(location, "Response object is nil")
 	}
 
-	// Read the original response body
-	originalBytes, err := io.ReadAll(t.response.Body)
+	// Determine the maximum number of bytes to read (falling back to the default).
+	maxSize := t.maxResponseSize
+	if maxSize <= 0 {
+		maxSize = defaultMaxResponseSize
+	}
+
+	// Read up to maxSize+1 bytes, so a body that exceeds the limit can be detected.
+	originalBytes, err := io.ReadAll(io.LimitReader(t.response.Body, maxSize+1))
 
 	if err != nil {
 		return []byte{}, derp.Wrap(err, location, "Unable to read response body")
+	}
+
+	if int64(len(originalBytes)) > maxSize {
+		return []byte{}, derp.Internal(location, "Response body exceeds maximum size", maxSize)
 	}
 
 	// Replace the (now used up) Body reader
