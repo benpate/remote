@@ -3,12 +3,14 @@ package remote
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/benpate/derp"
 	"github.com/benpate/uri"
@@ -29,6 +31,7 @@ type Transaction struct {
 	allowedHosts    []string          // (if set) request URL host must match one of these values
 	blockPrivateIPs bool              // if TRUE, refuse to connect to non-public (private/internal) IP addresses
 	maxResponseSize int64             // maximum number of bytes to read from the response body
+	ctx             context.Context   // (if set) context for request cancellation and deadlines
 	request         *http.Request     // HTTP request that is delivered to the remote server
 	response        *http.Response    // HTTP response that is returned from the remote server
 }
@@ -214,6 +217,14 @@ func (t *Transaction) MaxResponseSize(bytes int64) *Transaction {
 	return t
 }
 
+// WithContext attaches a context to the transaction, used to cancel the request
+// or apply a deadline. If no context is set, a background context with a default
+// one-minute timeout is used.
+func (t *Transaction) WithContext(ctx context.Context) *Transaction {
+	t.ctx = ctx
+	return t
+}
+
 // Result sets the object for parsing HTTP success responses
 func (t *Transaction) Result(object any) *Transaction {
 	t.success = object
@@ -236,8 +247,12 @@ func (t *Transaction) Send() error {
 		return err
 	}
 
+	// Resolve the request context (applying the default timeout if none was set).
+	ctx, cancel := t.requestContext()
+	defer cancel()
+
 	// Assemble the HTTP request from the transaction data
-	request, err := t.assembleRequest()
+	request, err := t.assembleRequest(ctx)
 
 	if err != nil {
 		return derp.Wrap(err, location, "Unable to create HTTP request")
@@ -328,7 +343,23 @@ func (t *Transaction) Send() error {
 	return nil
 }
 
-func (t *Transaction) assembleRequest() (*http.Request, error) {
+// defaultRequestTimeout bounds a request when the caller has not supplied a
+// context (via WithContext) carrying its own deadline.
+const defaultRequestTimeout = 1 * time.Minute
+
+// requestContext returns the context for this request and a cancel function that
+// must always be called. A caller-supplied context (via WithContext) is used as
+// is; otherwise a background context bounded by defaultRequestTimeout is used.
+func (t *Transaction) requestContext() (context.Context, context.CancelFunc) {
+
+	if t.ctx != nil {
+		return context.WithCancel(t.ctx)
+	}
+
+	return context.WithTimeout(context.Background(), defaultRequestTimeout)
+}
+
+func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error) {
 
 	const location = "remote.Transaction.assembleRequest"
 
@@ -362,8 +393,8 @@ func (t *Transaction) assembleRequest() (*http.Request, error) {
 		bodyReader = bytes.NewReader(body)
 	}
 
-	// Create the HTTP client request
-	result, err := http.NewRequest(t.method, t.RequestURL(), bodyReader)
+	// Create the HTTP client request, bound to the resolved context.
+	result, err := http.NewRequestWithContext(ctx, t.method, t.RequestURL(), bodyReader)
 
 	if err != nil {
 		return nil, derp.Wrap(err, location, "Unable to create HTTP request", derp.WithInternalError())
