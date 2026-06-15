@@ -29,7 +29,7 @@ type Transaction struct {
 	failure         any               // Object to parse the response into -- IF the status code is NOT successful
 	options         []Option          // options to execute on the request/response
 	allowedHosts    []string          // (if set) request URL host must match one of these values
-	blockPrivateIPs bool              // if TRUE, refuse to connect to non-public (private/internal) IP addresses
+	allowPrivateIPs bool              // if FALSE (the default), refuse to connect to non-public (private/internal) IP addresses
 	maxResponseSize int64             // maximum number of bytes to read from the response body
 	ctx             context.Context   // (if set) context for request cancellation and deadlines
 	request         *http.Request     // HTTP request that is delivered to the remote server
@@ -197,14 +197,13 @@ func (t *Transaction) AllowHosts(hosts ...string) *Transaction {
 	return t
 }
 
-// BlockPrivateIPs controls whether the transaction may connect to non-public IP
-// addresses. The default is FALSE (any address is allowed). When set to TRUE,
-// Send returns an error if the request (or any redirect) resolves to a
-// loopback, private, link-local, or other non-public address. This is the
-// dial-time protection used by SafeClient, applied to the transaction's
-// existing HTTP client.
-func (t *Transaction) BlockPrivateIPs(value bool) *Transaction {
-	t.blockPrivateIPs = value
+// AllowPrivateIPs controls whether the transaction may connect to non-public IP
+// addresses (loopback, private, link-local, etc.). The default is FALSE, so such
+// addresses are blocked to guard against SSRF: Send returns an error if the
+// request (or any redirect) resolves to one. Set it to TRUE to permit them — for
+// instance, when intentionally calling an internal or localhost service.
+func (t *Transaction) AllowPrivateIPs(value bool) *Transaction {
+	t.allowPrivateIPs = value
 	return t
 }
 
@@ -273,9 +272,10 @@ func (t *Transaction) Send() error {
 
 		var err error
 
-		// Use the configured client, optionally hardened to block non-public IPs.
+		// Use the configured client. Unless private IPs are explicitly allowed,
+		// harden it to block connections to non-public addresses.
 		client := t.client
-		if t.blockPrivateIPs {
+		if !t.allowPrivateIPs {
 			client = guardClient(client, uri.IsPublicIP)
 		}
 
