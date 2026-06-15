@@ -264,6 +264,16 @@ func (t *Transaction) Send() error {
 		}
 	}
 
+	// Close the response body when we're done, to release the underlying
+	// connection. ResponseBody (below) buffers the body in memory and swaps in a
+	// re-readable NopCloser, so closing the original here does not prevent
+	// callers from reading the response afterward.
+	if body := t.response.Body; body != nil {
+		defer func() {
+			_ = body.Close()
+		}()
+	}
+
 	// onAfterRequest modifies the response received from the server.
 	if err := t.onAfterRequest(t.response); err != nil {
 		err = derp.WrapHTTPError(err, t.request, t.response)
