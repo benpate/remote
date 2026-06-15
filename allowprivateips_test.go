@@ -44,14 +44,16 @@ func TestAllowPrivateIPs_False_Blocks(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestAllowPrivateIPs_GuardsCustomClientByDefault(t *testing.T) {
-	// The default guard applies even to a custom client.
+func TestAllowPrivateIPs_GuardsBeneathMiddleware(t *testing.T) {
+	// A WithRoundTripper middleware that delegates to "next" still gets the
+	// loopback connection blocked by the guarded base transport.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("should never be reached"))
 	}))
 	t.Cleanup(server.Close)
 
-	custom := &http.Client{Transport: &http.Transport{}}
-	err := Get(server.URL).Client(custom).Send()
+	passthrough := func(next http.RoundTripper) http.RoundTripper { return next }
+
+	err := Get(server.URL).WithRoundTripper(passthrough).Send()
 	require.Error(t, err)
 }

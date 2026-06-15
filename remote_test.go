@@ -72,6 +72,7 @@ func TestPost(t *testing.T) {
 	failure := map[string]any{}
 
 	txn := Post(ts.URL).
+		AllowPrivateIPs(true).
 		JSON(body).
 		Result(&success).
 		Error(&failure)

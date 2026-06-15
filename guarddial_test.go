@@ -6,7 +6,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/benpate/uri"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +21,7 @@ func TestGuardedDialContext_DelegatesForPublicIP(t *testing.T) {
 		return nil, errStubDial
 	}
 
-	guard := guardedDialContext(inner, uri.IsPublicIP)
+	guard := guardedDialContext(inner)
 	_, err := guard(context.Background(), "tcp", "8.8.8.8:443")
 
 	require.ErrorIs(t, err, errStubDial) // reached the inner dialer
@@ -37,7 +36,7 @@ func TestGuardedDialContext_BlocksPrivateIP(t *testing.T) {
 		return nil, errStubDial
 	}
 
-	guard := guardedDialContext(inner, uri.IsPublicIP)
+	guard := guardedDialContext(inner)
 
 	for _, address := range []string{"127.0.0.1:443", "10.0.0.1:80", "169.254.169.254:80", "[::1]:443"} {
 		_, err := guard(context.Background(), "tcp", address)
@@ -54,8 +53,8 @@ func TestGuardedDialContext_PreservesInnerDialer(t *testing.T) {
 		return nil, sentinel
 	}
 
-	guard := guardedDialContext(inner, func(net.IP) bool { return true })
-	_, err := guard(context.Background(), "tcp", "127.0.0.1:443")
+	guard := guardedDialContext(inner)
+	_, err := guard(context.Background(), "tcp", "8.8.8.8:443")
 
 	require.ErrorIs(t, err, sentinel)
 }

@@ -45,30 +45,34 @@ func TestDebug(t *testing.T) {
 	require.NoError(t, option.AfterRequest(nil, response))
 }
 
-func TestWithClient(t *testing.T) {
+func TestWithRoundTripper(t *testing.T) {
 
-	// A custom client with a recording transport proves WithClient swaps the client.
-	recorder := &recordingTransport{}
-	customClient := &http.Client{Transport: recorder}
+	// The middleware wraps the base transport and delegates to it (next).
+	wrapped := false
+
+	middleware := func(next http.RoundTripper) http.RoundTripper {
+		return roundTripperFunc(func(request *http.Request) (*http.Response, error) {
+			wrapped = true
+			return next.RoundTrip(request)
+		})
+	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(200)
 	}))
 	defer ts.Close()
 
-	err := remote.Get(ts.URL).With(WithClient(customClient)).Send()
+	// AllowPrivateIPs is required because the test server listens on loopback.
+	err := remote.Get(ts.URL).AllowPrivateIPs(true).With(WithRoundTripper(middleware)).Send()
 	require.NoError(t, err)
-	require.True(t, recorder.called, "expected the custom client's transport to be used")
+	require.True(t, wrapped, "expected the middleware to wrap the base transport")
 }
 
-// recordingTransport records whether it was invoked, then delegates to the default transport.
-type recordingTransport struct {
-	called bool
-}
+// roundTripperFunc adapts a function to the http.RoundTripper interface.
+type roundTripperFunc func(*http.Request) (*http.Response, error)
 
-func (rt *recordingTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	rt.called = true
-	return http.DefaultTransport.RoundTrip(request)
+func (f roundTripperFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
 }
 
 func TestTestServer_Match(t *testing.T) {

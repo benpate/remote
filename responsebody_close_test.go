@@ -20,26 +20,26 @@ func (b *trackingBody) Close() error {
 	return nil
 }
 
-// stubTransport returns a fixed response built around the given body.
-type stubTransport struct {
-	body io.ReadCloser
-}
+// rtFunc adapts a function to the http.RoundTripper interface.
+type rtFunc func(*http.Request) (*http.Response, error)
 
-func (s *stubTransport) RoundTrip(*http.Request) (*http.Response, error) {
-	return &http.Response{
-		StatusCode: http.StatusOK,
-		Header:     make(http.Header),
-		Body:       s.body,
-	}, nil
+func (f rtFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
 }
 
 func TestSend_ClosesResponseBody(t *testing.T) {
-	// Use a stub transport so we can observe the response body being closed.
+	// A middleware returns a fixed response with a body we can observe; it does
+	// not delegate to "next", so no real connection is made.
 	body := &trackingBody{Reader: strings.NewReader("ok")}
-	client := &http.Client{Transport: &stubTransport{body: body}}
+
+	middleware := func(http.RoundTripper) http.RoundTripper {
+		return rtFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: body}, nil
+		})
+	}
 
 	var result string
-	err := Get("http://example.com").Client(client).Result(&result).Send()
+	err := Get("http://example.com").WithRoundTripper(middleware).Result(&result).Send()
 
 	require.Nil(t, err)
 	require.Equal(t, "ok", result) // body was read

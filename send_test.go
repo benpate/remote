@@ -27,7 +27,7 @@ func TestSend_Success(t *testing.T) {
 	defer ts.Close()
 
 	result := map[string]any{}
-	err := Get(ts.URL).Result(&result).Send()
+	err := Get(ts.URL).AllowPrivateIPs(true).Result(&result).Send()
 
 	require.NoError(t, err)
 	require.Equal(t, "Sarah", result["name"])
@@ -42,7 +42,7 @@ func TestSend_ErrorStatusWithFailureObject(t *testing.T) {
 	success := map[string]any{}
 	failure := map[string]any{}
 
-	err := Get(ts.URL).Result(&success).Error(&failure).Send()
+	err := Get(ts.URL).AllowPrivateIPs(true).Result(&success).Error(&failure).Send()
 
 	require.Error(t, err)
 	require.Equal(t, "not found", failure["error"])
@@ -53,7 +53,7 @@ func TestSend_ErrorStatusNoFailureObject(t *testing.T) {
 	ts := jsonServer(500, `{"error":"boom"}`)
 	defer ts.Close()
 
-	err := Get(ts.URL).Send()
+	err := Get(ts.URL).AllowPrivateIPs(true).Send()
 	require.Error(t, err)
 }
 
@@ -69,7 +69,7 @@ func TestSend_ErrorStatusBadFailureBody(t *testing.T) {
 	defer ts.Close()
 
 	failure := map[string]any{}
-	err := Get(ts.URL).Error(&failure).Send()
+	err := Get(ts.URL).AllowPrivateIPs(true).Error(&failure).Send()
 	require.Error(t, err)
 }
 
@@ -80,7 +80,7 @@ func TestSend_InvalidURL(t *testing.T) {
 
 func TestSend_NetworkError(t *testing.T) {
 	// A well-formed URL pointing at a closed port produces a transport error
-	err := Get("http://127.0.0.1:0").Send()
+	err := Get("http://127.0.0.1:0").AllowPrivateIPs(true).Send()
 	require.Error(t, err)
 }
 
@@ -95,7 +95,7 @@ func TestSend_BeforeRequestError(t *testing.T) {
 		},
 	}
 
-	err := Get(ts.URL).With(option).Send()
+	err := Get(ts.URL).AllowPrivateIPs(true).With(option).Send()
 	require.Error(t, err)
 }
 
@@ -110,7 +110,7 @@ func TestSend_AfterRequestError(t *testing.T) {
 		},
 	}
 
-	err := Get(ts.URL).With(option).Send()
+	err := Get(ts.URL).AllowPrivateIPs(true).With(option).Send()
 	require.Error(t, err)
 }
 
@@ -131,7 +131,7 @@ func TestSend_ModifyRequestReplacesResponse(t *testing.T) {
 	}
 
 	result := map[string]any{}
-	err := Get("http://127.0.0.1:0").With(option).Result(&result).Send()
+	err := Get("http://127.0.0.1:0").AllowPrivateIPs(true).With(option).Result(&result).Send()
 
 	require.NoError(t, err)
 	require.True(t, called)
@@ -144,7 +144,7 @@ func TestSend_UnsupportedRequestContentType(t *testing.T) {
 	defer ts.Close()
 
 	// A POST with an XML content type fails when assembling the request body
-	err := Post(ts.URL).ContentType(ContentTypeXML).Send()
+	err := Post(ts.URL).AllowPrivateIPs(true).ContentType(ContentTypeXML).Send()
 	require.Error(t, err)
 }
 
@@ -163,7 +163,7 @@ func TestSend_PostFormRoundTrip(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	err := Post(ts.URL).Form("a", "1").Form("b", "2").Send()
+	err := Post(ts.URL).AllowPrivateIPs(true).Form("a", "1").Form("b", "2").Send()
 	require.NoError(t, err)
 	require.Equal(t, ContentTypeForm, receivedContentType)
 	require.Equal(t, "a=1&b=2", receivedBody)

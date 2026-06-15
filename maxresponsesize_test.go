@@ -25,7 +25,7 @@ func TestMaxResponseSize_Exceeded(t *testing.T) {
 	server := sizedServer(t, 1000)
 
 	var result []byte
-	err := Get(server.URL).MaxResponseSize(100).Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).MaxResponseSize(100).Result(&result).Send()
 	require.Error(t, err)
 }
 
@@ -33,7 +33,7 @@ func TestMaxResponseSize_WithinLimit(t *testing.T) {
 	server := sizedServer(t, 100)
 
 	var result []byte
-	err := Get(server.URL).MaxResponseSize(1000).Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).MaxResponseSize(1000).Result(&result).Send()
 	require.Nil(t, err)
 	require.Len(t, result, 100)
 }
@@ -43,7 +43,7 @@ func TestMaxResponseSize_ExactBoundary(t *testing.T) {
 
 	// A body exactly at the limit is allowed.
 	var result []byte
-	err := Get(server.URL).MaxResponseSize(100).Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).MaxResponseSize(100).Result(&result).Send()
 	require.Nil(t, err)
 	require.Len(t, result, 100)
 }
@@ -54,7 +54,7 @@ func TestMaxResponseSize_ZeroRestoresDefault(t *testing.T) {
 	// A zero (or negative) limit falls back to the 1GB default, so a small body
 	// is read normally.
 	var result []byte
-	err := Get(server.URL).MaxResponseSize(0).Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).MaxResponseSize(0).Result(&result).Send()
 	require.Nil(t, err)
 	require.Len(t, result, 100)
 }

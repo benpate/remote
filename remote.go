@@ -8,7 +8,6 @@ import (
 func New() *Transaction {
 
 	t := &Transaction{
-		client:          DefaultClient(),
 		method:          "",
 		url:             "",
 		header:          map[string]string{},

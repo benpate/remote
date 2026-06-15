@@ -18,7 +18,7 @@ func TestWithContext_Success(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	var result string
-	err := Get(server.URL).WithContext(context.Background()).Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).WithContext(context.Background()).Result(&result).Send()
 
 	require.Nil(t, err)
 	require.Equal(t, "ok", result)
@@ -29,7 +29,7 @@ func TestWithContext_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("server should not be contacted with a cancelled context")
 	}))
 	t.Cleanup(server.Close)
@@ -43,7 +43,7 @@ func TestWithContext_DeadlineExceeded(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Hour))
 	t.Cleanup(cancel)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("server should not be contacted with an expired deadline")
 	}))
 	t.Cleanup(server.Close)
@@ -94,6 +94,6 @@ func TestWithContext_DefaultWithoutContext(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	var result string
-	require.Nil(t, Get(server.URL).Result(&result).Send())
+	require.Nil(t, Get(server.URL).AllowPrivateIPs(true).Result(&result).Send())
 	require.Equal(t, "default", result)
 }

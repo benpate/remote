@@ -15,12 +15,12 @@ func TestMethodAndURL(t *testing.T) {
 	require.Equal(t, "http://example.com/path", tx.url)
 }
 
-func TestClient(t *testing.T) {
+func TestWithRoundTripper(t *testing.T) {
 
-	custom := &http.Client{}
-	tx := New().Client(custom)
+	wrap := func(next http.RoundTripper) http.RoundTripper { return next }
+	tx := New().WithRoundTripper(wrap)
 
-	require.Same(t, custom, tx.client)
+	require.NotNil(t, tx.roundTripper)
 }
 
 func TestUserAgent(t *testing.T) {
@@ -73,19 +73,12 @@ func TestNew_Defaults(t *testing.T) {
 
 	tx := New()
 
-	require.NotNil(t, tx.client)
 	require.NotNil(t, tx.header)
 	require.NotNil(t, tx.query)
 	require.NotNil(t, tx.form)
 	require.NotNil(t, tx.options)
 	require.Equal(t, "", tx.method)
 	require.Equal(t, "", tx.url)
-}
-
-func TestDefaultClient(t *testing.T) {
-	client := DefaultClient()
-	require.NotNil(t, client)
-	require.Greater(t, int64(client.Timeout), int64(0))
 }
 
 func TestOptions_Function(t *testing.T) {

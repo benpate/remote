@@ -18,7 +18,7 @@ func TestAllowHosts_PermitsListedHost(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	var result string
-	err := Get(server.URL).AllowHosts("127.0.0.1").Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).AllowHosts("127.0.0.1").Result(&result).Send()
 
 	require.Nil(t, err)
 	require.Equal(t, string(body), result)
@@ -27,7 +27,7 @@ func TestAllowHosts_PermitsListedHost(t *testing.T) {
 func TestAllowHosts_RejectsUnlistedHost(t *testing.T) {
 	// The request URL host is not in the allow-list, so Send fails before
 	// contacting the server.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("server should never be contacted")
 	}))
 	t.Cleanup(server.Close)
@@ -53,7 +53,7 @@ func TestAllowHosts_EmptyListAllowsAny(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	var result string
-	err := Get(server.URL).Result(&result).Send()
+	err := Get(server.URL).AllowPrivateIPs(true).Result(&result).Send()
 
 	require.Nil(t, err)
 	require.Equal(t, string(body), result)

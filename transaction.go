@@ -18,22 +18,22 @@ import (
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
-	client          *http.Client      // HTTP client to use to execute the request.  This may be overridden or updated by the calling program.
-	method          string            // HTTP method to use when sending the request
-	url             string            // URL of the remote server to call
-	header          map[string]string // HTTP Header values to send in the request
-	query           url.Values        // Query String to append to the URL
-	form            url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
-	body            any               // Other data to send in the body.  Encoding determined by header["Content-Type"]
-	success         any               // Object to parse the response into -- IF the status code is successful
-	failure         any               // Object to parse the response into -- IF the status code is NOT successful
-	options         []Option          // options to execute on the request/response
-	allowedHosts    []string          // (if set) request URL host must match one of these values
-	allowPrivateIPs bool              // if FALSE (the default), refuse to connect to non-public (private/internal) IP addresses
-	maxResponseSize int64             // maximum number of bytes to read from the response body
-	ctx             context.Context   // (if set) context for request cancellation and deadlines
-	request         *http.Request     // HTTP request that is delivered to the remote server
-	response        *http.Response    // HTTP response that is returned from the remote server
+	roundTripper    func(http.RoundTripper) http.RoundTripper // (if set) wraps the base transport with caller-supplied middleware
+	method          string                                    // HTTP method to use when sending the request
+	url             string                                    // URL of the remote server to call
+	header          map[string]string                         // HTTP Header values to send in the request
+	query           url.Values                                // Query String to append to the URL
+	form            url.Values                                // (if set) Form data to pass to the remote server as x-www-form-urlencoded
+	body            any                                       // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	success         any                                       // Object to parse the response into -- IF the status code is successful
+	failure         any                                       // Object to parse the response into -- IF the status code is NOT successful
+	options         []Option                                  // options to execute on the request/response
+	allowedHosts    []string                                  // (if set) request URL host must match one of these values
+	allowPrivateIPs bool                                      // if FALSE (the default), refuse to connect to non-public (private/internal) IP addresses
+	maxResponseSize int64                                     // maximum number of bytes to read from the response body
+	ctx             context.Context                           // (if set) context for request cancellation and deadlines
+	request         *http.Request                             // HTTP request that is delivered to the remote server
+	response        *http.Response                            // HTTP response that is returned from the remote server
 }
 
 /******************************************
@@ -87,9 +87,12 @@ func (t *Transaction) Delete(url string) *Transaction {
 	return t
 }
 
-// Client sets the HTTP client to use for the transaction.
-func (t *Transaction) Client(client *http.Client) *Transaction {
-	t.client = client
+// WithRoundTripper wraps the transaction's SSRF-hardened base transport with the
+// given middleware, letting callers add behavior such as caching or custom
+// headers while keeping the private-IP guard underneath. The middleware receives
+// the base transport as "next" and must delegate to it to perform the request.
+func (t *Transaction) WithRoundTripper(wrap func(next http.RoundTripper) http.RoundTripper) *Transaction {
+	t.roundTripper = wrap
 	return t
 }
 
@@ -272,15 +275,8 @@ func (t *Transaction) Send() error {
 
 		var err error
 
-		// Use the configured client. Unless private IPs are explicitly allowed,
-		// harden it to block connections to non-public addresses.
-		client := t.client
-		if !t.allowPrivateIPs {
-			client = guardClient(client, uri.IsPublicIP)
-		}
-
-		// Executing request using HTTP client
-		t.response, err = client.Do(t.request)
+		// Executing request using the assembled HTTP client
+		t.response, err = t.buildClient().Do(t.request)
 
 		if err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
@@ -357,6 +353,30 @@ func (t *Transaction) requestContext() (context.Context, context.CancelFunc) {
 	}
 
 	return context.WithTimeout(context.Background(), defaultRequestTimeout)
+}
+
+// buildClient assembles the http.Client used to execute the request. The base
+// transport blocks non-public IPs unless AllowPrivateIPs is set; any
+// WithRoundTripper middleware wraps that base, so the guard stays underneath.
+func (t *Transaction) buildClient() *http.Client {
+
+	var base http.RoundTripper = safeTransport
+
+	if t.allowPrivateIPs {
+		base = http.DefaultTransport
+	}
+
+	transport := base
+
+	if t.roundTripper != nil {
+		transport = t.roundTripper(base)
+	}
+
+	return &http.Client{
+		Timeout:       defaultTimeout,
+		Transport:     transport,
+		CheckRedirect: limitRedirects,
+	}
 }
 
 func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error) {
