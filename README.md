@@ -8,172 +8,122 @@
 
 ## Crazy Simple, Chainable HTTP Client for Go
 
-Remote is a paper-thin wrapper for Go's HTTP library, that gives you sensible defaults, a pretty API with some modern conveniences, and full control of your HTTP requests.  It's the fastest and easiest way to make an HTTP call using Go.
+Remote is a paper-thin wrapper for Go's HTTP library that gives you sensible defaults, a chainable API with modern conveniences, and full control of your HTTP requests. It's a fast, easy way to make an HTTP call in Go — and it is hardened against SSRF by default.
 
-Inspired by [Brandon Romano's Wrecker](https://github.com/BrandonRomano/wrecker).  Thanks Brandon!
+Inspired by [Brandon Romano's Wrecker](https://github.com/BrandonRomano/wrecker). Thanks Brandon!
 
-### How to Get data from an HTTP server
+### Get data from an HTTP server
 
 ```go
-// Structure to read remote data into
+// Structure to read the remote data into
 users := []struct {
-    ID string
-    Name string
+    ID       string
+    Name     string
     Username string
-    Email string
+    Email    string
 }{}
 
 // Get data from a remote server
-remote.Get("https://jsonplaceholder.typicode.com/users").
-    Result(users, nil).
+err := remote.Get("https://jsonplaceholder.typicode.com/users").
+    Result(&users).
     Send()
-
 ```
 
-### How to Post/Put/Patch/Delete data to an HTTP server
+### Post/Put/Patch/Delete data to an HTTP server
 
 ```go
 // Data to send to the remote server
 user := map[string]string{
-    "id": "ABC123",
-    "name": "Sarah Connor",
+    "id":    "ABC123",
+    "name":  "Sarah Connor",
     "email": "sarah@sky.net",
 }
 
-// Structure to read response into
+// Structure to read the response into
 response := map[string]string{}
 
-// Post data to the remote server (use your own URL)
-remote.Post("https://example.com/post-service").
-    JSON(user). // encode the user object into the request body as JSON
-    Result(response, nil). // parse response (or error) into a data structure
+// Post data to the remote server
+err := remote.Post("https://example.com/post-service").
+    JSON(user).         // encode the user object into the request body as JSON
+    Result(&response).  // parse a successful response into this structure
     Send()
 ```
 
 ### Handling HTTP Errors
 
-Web services represent errors in a number of ways.  Some simply return an HTTP error code,
-while others return complex data structures in the response body.  REMOTE works with each
-style of error handling, so that your app always has the best information to work from.
+Web services represent errors in many ways. Some return only an HTTP status code; others return a structured document in the response body. Remote handles both. Use `.Result()` for the success body and `.Error()` for the failure body — `Send()` returns a non-nil error whenever the response status is outside the 200–299 range, and populates whichever object matches the outcome.
 
 ```go
-// Structure to read successful response into.  This format is specific to the HTTP service.
-success := struct{Name: string, Value: string, Comment: string}
+success := SuccessResponse{} // shape defined by the remote service
+failure := ErrorResponse{}   // shape defined by the remote service
 
-// Structure to read failed response data into.  This format is specific to the HTTP service.
-failure := struct(Code: int, Reason: string, StackTrace: string)
+err := remote.Get("https://example.com/service-that-might-error").
+    Result(&success).
+    Error(&failure).
+    Send()
 
-transaction := remote.Get("https://example.com/service-that-might-error").
-    .Result(&success, &failure)
-
-// Transaction returns an error **IF** the HTTP response code is not successful (200-299)
-if err := transaction.Send(); err != nil {
-    // Handle errors here.
-    // `failure` variable will be populated with data from the remote service
-    return
+// Send returns an error IF the HTTP status is not 2xx.
+if err != nil {
+    // `failure` is populated with the error body from the remote service.
+    return err
 }
 
-// Fall through to here means that the transaction was successful.  
-// `success` variable will be populated with data from the remote service.
+// Fall through means success: `success` is populated.
 ```
 
-## Middleware
+## Security
 
-Middleware allows you to modify a request before it is sent to the remote server, or modify the response after it is returned by the remote server.  Each middleware object includes three hooks
+Remote is built for calling untrusted, user-supplied URLs safely. These guards are on by default.
 
-### Included Middleware
+* **Private IPs are blocked.** By default the client refuses to connect to loopback, private, and link-local addresses — defending against SSRF. The check lives in the dialer and re-runs on every redirect hop, so it is safe against DNS rebinding. Call `.AllowPrivateIPs(true)` to opt out (e.g. for localhost or internal services).
+* **Host allow-listing.** `.AllowHosts("example.com", ...)` restricts a transaction to specific hosts. The list is re-checked on every redirect, so an allow-listed server cannot redirect you somewhere unexpected.
+* **Response size is capped** at 1GB by default, preventing a hostile server from exhausting memory. Tune it with `.MaxResponseSize(n)`.
+* **Redirects are capped** at 5 hops.
+* **Requests are time-bounded.** Without a context, a one-minute timeout applies. Supply your own deadline or cancellation with `.WithContext(ctx)`.
 
 ```go
-// AUTHORIZATION adds a simple "Authorization" header to your request
-remote.Get("https://jsonplaceholder.typicode.com/users").
-    Use(middleware.Authorization(myAuthorizationKey)).
-    Result(users, nil).
+err := remote.Get(userSuppliedURL).
+    AllowHosts("api.trusted.com").
+    MaxResponseSize(10 * 1024 * 1024). // 10MB
+    WithContext(ctx).
+    Result(&data).
     Send()
 ```
+
+## Options
+
+Options modify a request before it is sent, or the response after it returns. Add them with `.With(...)`. The [`options`](https://github.com/benpate/remote/tree/main/options) subpackage ships a library of common ones.
 
 ```go
-// BASIC AUTH adds a Base64 encoded "Authorization" header to your request,
-// which follows the basic authorization standard
-remote.Get("https://jsonplaceholder.typicode.com/users").
-    Use(middleware.BasicAuth(username, password)).
-    Result(users, nil).
+import "github.com/benpate/remote/options"
+
+err := remote.Get("https://jsonplaceholder.typicode.com/users").
+    With(options.BearerAuth(myAccessToken)).
+    With(options.UserAgent("my-app/1.0")).
+    Result(&users).
     Send()
 ```
+
+See the [options README](options/README.md) for the full list. An `Option` exposes three hooks — `BeforeRequest`, `ModifyRequest`, and `AfterRequest` — so you can write your own; the included options are short and make good templates.
+
+## Custom Transport
+
+`.WithRoundTripper(...)` wraps the SSRF-hardened base transport with your own middleware (for caching, instrumentation, custom headers, etc.). Your middleware receives the base transport as `next` and **must delegate to it** to perform the request — keeping the private-IP guard underneath.
 
 ```go
-// DEBUG prints debugging statements to the console
-remote.Get("https://jsonplaceholder.typicode.com/users").
-    Use(middleware.Debug()).
-    Result(users, nil).
+err := remote.Get("https://example.com").
+    WithRoundTripper(func(next http.RoundTripper) http.RoundTripper {
+        return myCachingTransport{next: next}
+    }).
     Send()
 ```
 
-```go
-// OPAQUE makes direct changes to the URL string.
-remote.Get("https://jsonplaceholder.typicode.com/users").
-    Use(middleware.Opaque(opaqueURLStringHere)).
-    Result(users, nil).
-    Send()
-```
-
-### Writing Custom Middleware
-
-It's easy to write additional, custom middleware for your project.  Just follow the samples in the `/middleware` folder, and pass in any object that follows the `Middleware` interface.
-
-**`Config(*Transaction)`** allows you to change the transaction configuration before it is compiled into an HTTP request.  This is typically the simplest, and easiest way to modify a request
-
-**`Request(*http.Request)`** allows you to modify the raw HTTP request before it is sent to the remote server.  This is useful in the rare cases when you need to make changes to a request that this library doesn't support.
-
-**`Response(*http.Response)`** allows you to modify the raw HTTP response before its results are parsed and returned to the caller.
-
-## Turbine Queue
-
-Remote works with the [Turbine queue](https://github.com/benpate/turbine) to queue and retry transactions.
-
-```golang
-
-myQueue := queue.New(WithConsumers(remote.Consumer()))
-
-remote.Post("https://server.com").
-    Queue(myQueue).
-    Send()
-```
-
-### Publish Transactions to a Queue
-
-When you create a remote Transaction, you can add it to a Turbine queue using the `.Queue` method.  This method allows you to include a list of Task Options that modify the task that is published to the queue.  For instance, you can choose a specific task priority, delay time, or maximum retry count.
-
-```go
-remote.Post("https://server.com").
-    Queue(
-        myQueue, 
-        queue.WithPriority(0), // these options modify the created queue.Task
-        queue.WithRetryCount(8)). // these options modify the created queue.Task
-    Send()
-```
-
-**IMPORTANT:** When you queue a transaction it is executed asynchronously, and possibly several times until successful.  This means that you cannot receive live responses in your application anymore.  So, `Result` and `Error` modifiers will be ignored, as will the `AfterRequest` portions of any options.
-
-
-### Consume Transactions from a Queue
-
-This library includes a turbine queue.Consumer that executes remote.Transactions from the queue.  This consumer can take any number of remote.Options to configure how queued transactions will be executed.
-
-```golang
-
-// Create a queue.Consumer to handle remote transactions
-consumer := remote.Consumer(
-    remote.WithClient(...) // these options modify the created remote.Transaction
-)
-
-myQueue := queue.New(WithConsumers(consumer))
-
-```
+Note that if your middleware short-circuits and returns a response *without* delegating to `next` (e.g. a cache hit), no dial happens — and therefore neither SSRF guard runs. That is by design for caching, but worth knowing when the source URL is untrusted.
 
 ## Pull Requests Welcome
 
-Original versions of this library have been used in production on commercial applications for years, and have helped speed up development for everyone involved.  
+Original versions of this library have been used in production on commercial applications for years, and have helped speed up development for everyone involved.
 
-I'm now open sourcing this library, and others, with hopes that you'll also benefit from an easy HTTP library.
+I'm open sourcing this library, and others, with hopes that you'll also benefit from an easy HTTP library.
 
-Please use GitHub to make suggestions, pull requests, and enhancements.  We're all in this together! 🏝
+Please use GitHub to make suggestions, pull requests, and enhancements. We're all in this together! 🏝
