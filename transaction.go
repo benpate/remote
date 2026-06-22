@@ -18,22 +18,24 @@ import (
 
 // Transaction represents a single HTTP request/response to a remote HTTP server.
 type Transaction struct {
-	roundTripper    func(http.RoundTripper) http.RoundTripper // (if set) wraps the base transport with caller-supplied middleware
-	method          string                                    // HTTP method to use when sending the request
-	url             string                                    // URL of the remote server to call
-	header          map[string]string                         // HTTP Header values to send in the request
-	query           url.Values                                // Query String to append to the URL
-	form            url.Values                                // (if set) Form data to pass to the remote server as x-www-form-urlencoded
-	body            any                                       // Other data to send in the body.  Encoding determined by header["Content-Type"]
-	success         any                                       // Object to parse the response into -- IF the status code is successful
-	failure         any                                       // Object to parse the response into -- IF the status code is NOT successful
-	options         []Option                                  // options to execute on the request/response
-	allowedHosts    []string                                  // (if set) request URL host must match one of these values
-	allowPrivateIPs bool                                      // if FALSE (the default), refuse to connect to non-public (private/internal) IP addresses
-	maxResponseSize int64                                     // maximum number of bytes to read from the response body
-	ctx             context.Context                           // (if set) context for request cancellation and deadlines
-	request         *http.Request                             // HTTP request that is delivered to the remote server
-	response        *http.Response                            // HTTP response that is returned from the remote server
+	method          string            // HTTP method to use when sending the request
+	url             string            // URL of the remote server to call
+	header          map[string]string // HTTP Header values to send in the request
+	query           url.Values        // Query String to append to the URL
+	form            url.Values        // (if set) Form data to pass to the remote server as x-www-form-urlencoded
+	body            any               // Other data to send in the body.  Encoding determined by header["Content-Type"]
+	success         any               // Object to parse the response into -- IF the status code is successful
+	failure         any               // Object to parse the response into -- IF the status code is NOT successful
+	options         []Option          // options to execute on the request/response
+	allowedHosts    []string          // (if set) request URL host must match one of these values
+	allowPrivateIPs bool              // if FALSE (the default), refuse to connect to non-public (private/internal) IP addresses
+	maxResponseSize int64             // maximum number of bytes to read from the response body
+	ctx             context.Context   // NOSONAR(S8242): request-scoped builder
+
+	request  *http.Request  // HTTP request that is delivered to the remote server
+	response *http.Response // HTTP response that is returned from the remote server
+
+	roundTripper func(http.RoundTripper) http.RoundTripper // (if set) wraps the base transport with caller-supplied middleware
 }
 
 /******************************************
