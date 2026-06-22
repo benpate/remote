@@ -411,8 +411,27 @@ func (t *Transaction) buildClient() *http.Client {
 	return &http.Client{
 		Timeout:       defaultTimeout,
 		Transport:     transport,
-		CheckRedirect: limitRedirects,
+		CheckRedirect: t.checkRedirect,
 	}
+}
+
+// checkRedirect is the http.Client CheckRedirect policy. It caps the redirect
+// chain and re-applies the host allow-list to each redirect target, so an
+// allow-listed server cannot redirect the request to a host that is not on the
+// list. (The private-IP guard re-runs automatically, since it lives in the dialer.)
+func (t *Transaction) checkRedirect(request *http.Request, via []*http.Request) error {
+
+	const location = "remote.Transaction.checkRedirect"
+
+	if len(via) >= maxRedirects {
+		return derp.BadRequest(location, "Too many redirects")
+	}
+
+	if !t.hostIsAllowed(request.URL.Hostname()) {
+		return derp.Forbidden(location, "Redirect to host not in the allow-list", request.URL.Hostname())
+	}
+
+	return nil
 }
 
 func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error) {
@@ -480,11 +499,22 @@ func (t *Transaction) validateAllowedHosts() error {
 		return derp.Wrap(err, location, "Parsing URL", t.url, derp.WithInternalError())
 	}
 
-	if slices.Contains(t.allowedHosts, strings.ToLower(parsed.Hostname())) {
+	if t.hostIsAllowed(parsed.Hostname()) {
 		return nil
 	}
 
 	return derp.Forbidden(location, "Host is not in the allow-list", parsed.Hostname())
+}
+
+// hostIsAllowed reports whether the given host satisfies the transaction's host
+// allow-list. An empty allow-list permits any host. Matching is case-insensitive.
+func (t *Transaction) hostIsAllowed(host string) bool {
+
+	if len(t.allowedHosts) == 0 {
+		return true
+	}
+
+	return slices.Contains(t.allowedHosts, strings.ToLower(host))
 }
 
 // assembleBearCap pre-processes special bearer capability URLs.

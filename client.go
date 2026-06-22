@@ -47,18 +47,6 @@ func newGuardedTransport() *http.Transport {
 	return transport
 }
 
-// limitRedirects is the CheckRedirect policy that caps a redirect chain.
-func limitRedirects(_ *http.Request, via []*http.Request) error {
-
-	const location = "remote.limitRedirects"
-
-	if len(via) >= maxRedirects {
-		return derp.BadRequest(location, "Too many redirects")
-	}
-
-	return nil
-}
-
 // guardedDialContext wraps an inner DialContext so it refuses to connect to any
 // non-public address, while delegating the actual connection to inner. The host
 // is resolved and every candidate address is checked; the connection is then

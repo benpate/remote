@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,6 +44,27 @@ func TestAllowHosts_CaseInsensitive(t *testing.T) {
 
 	// A host that is not on the list is rejected.
 	require.Error(t, Get("https://other.com/path").AllowHosts("example.com").validateAllowedHosts())
+}
+
+func TestAllowHosts_RejectsRedirectToUnlistedHost(t *testing.T) {
+	// A redirect target whose host is not in the allow-list must be blocked, even
+	// when the initial (allow-listed) host issues the redirect. The redirect points
+	// at "localhost" (which also resolves to loopback) while only "127.0.0.1" is
+	// allow-listed, so this exercises the allow-list rather than the IP guard.
+	redirectFollowed := false
+	trusted := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirected" {
+			redirectFollowed = true
+			return
+		}
+		_, port, _ := net.SplitHostPort(r.Host)
+		http.Redirect(w, r, "http://localhost:"+port+"/redirected", http.StatusFound)
+	}))
+	t.Cleanup(trusted.Close)
+
+	err := Get(trusted.URL).AllowPrivateIPs(true).AllowHosts("127.0.0.1").Send()
+	require.Error(t, err)
+	require.False(t, redirectFollowed, "request must not follow a redirect to an unlisted host")
 }
 
 func TestAllowHosts_EmptyListAllowsAny(t *testing.T) {
