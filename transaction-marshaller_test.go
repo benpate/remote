@@ -43,6 +43,22 @@ func TestMarshalJSON_RoundTrip(t *testing.T) {
 	require.Equal(t, "1", restored.header["X-Test"])
 }
 
+func TestMarshalJSON_RoundTripForm(t *testing.T) {
+
+	tx := Post("http://example.com").Form("name", "Sarah").Form("age", "42")
+
+	data, err := json.Marshal(tx)
+	require.NoError(t, err)
+
+	restored := New()
+	require.NoError(t, json.Unmarshal(data, restored))
+
+	// Form data must survive the round-trip; MarshalMap emits "form" and
+	// UnmarshalMap reads it.
+	require.Equal(t, "Sarah", restored.form.Get("name"))
+	require.Equal(t, "42", restored.form.Get("age"))
+}
+
 func TestUnmarshalJSON_Error(t *testing.T) {
 	tx := New()
 	require.Error(t, json.Unmarshal([]byte("not json"), tx))

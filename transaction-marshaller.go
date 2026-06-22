@@ -55,6 +55,7 @@ func (t *Transaction) MarshalMap() map[string]any {
 		"url":    t.url,
 		"header": t.header,
 		"query":  t.query,
+		"form":   t.form,
 		"date":   t.header["Date"],
 		"body":   string(body),
 	}
