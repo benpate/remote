@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 
@@ -39,7 +40,9 @@ func (t *Transaction) RequestBody() ([]byte, error) {
 		return []byte(typedValue), nil
 
 	case []byte:
-		return typedValue, nil
+		// Return a copy so a caller mutating the result cannot alter the
+		// transaction's body through its shared backing array.
+		return bytes.Clone(typedValue), nil
 	}
 
 	contentType := t.header[ContentType]
