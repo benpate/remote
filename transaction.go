@@ -114,15 +114,29 @@ func (t *Transaction) Accept(contentTypes ...string) *Transaction {
 
 	}
 
-	// Build the Accept header with priorities
-	accept := ""
-	q := 1.0
-	for _, contentType := range contentTypes {
-		accept += contentType + ";q=" + strconv.FormatFloat(q, 'f', 1, 64) + ", "
-		q -= 0.1
+	// Build the Accept header, assigning each type a descending q-value. The
+	// value is computed from the index (not by repeated subtraction, which drifts)
+	// and floored at 0.1, since RFC 9110 requires q to stay within [0, 1] and a
+	// q of 0 means "not acceptable".
+	var accept strings.Builder
+
+	for index, contentType := range contentTypes {
+
+		q := 1.0 - (float64(index) * 0.1)
+		if q < 0.1 {
+			q = 0.1
+		}
+
+		if index > 0 {
+			accept.WriteString(", ")
+		}
+
+		accept.WriteString(contentType)
+		accept.WriteString(";q=")
+		accept.WriteString(strconv.FormatFloat(q, 'f', 1, 64))
 	}
 
-	return t.Header(Accept, strings.TrimRight(accept, ", "))
+	return t.Header(Accept, accept.String())
 }
 
 // ContentType sets the Content-Type header of the HTTP request.

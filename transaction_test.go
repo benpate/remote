@@ -32,6 +32,11 @@ func TestAccept(t *testing.T) {
 
 	tx.Accept("application/json", "application/xml", "text/plain")
 	require.Equal(t, "application/json;q=1.0, application/xml;q=0.9, text/plain;q=0.8", tx.header["Accept"])
+
+	// With more than ten types, q-values are floored at 0.1 so they never reach
+	// 0.0 or go negative (RFC 9110 requires q within [0, 1]).
+	tx.Accept("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l")
+	require.Equal(t, "a;q=1.0, b;q=0.9, c;q=0.8, d;q=0.7, e;q=0.6, f;q=0.5, g;q=0.4, h;q=0.3, i;q=0.2, j;q=0.1, k;q=0.1, l;q=0.1", tx.header["Accept"])
 }
 
 func TestContentType(t *testing.T) {
