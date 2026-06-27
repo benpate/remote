@@ -569,32 +569,3 @@ func (t *Transaction) statusCode() int {
 
 	return 0
 }
-
-/* This is commented out in general, but is sometimes used in debugging.
-// ErrorReport generates a data dump of the current state of the HTTP transaction.
-// This is used when reporting errors via derp, to provide insights into what went wrong.
-func (t *Transaction) errorReport() ErrorReport {
-
-	result := ErrorReport{}
-
-	result.URL = t.RequestURL()
-	result.Request.Method = t.method
-	result.Request.Header = t.header
-
-	if body, err := t.RequestBody(); err == nil {
-		result.Request.Body = string(body)
-	}
-
-	if t.response != nil {
-		result.Response.StatusCode = t.response.StatusCode
-		result.Response.Status = t.response.Status
-		result.Response.Header = t.response.Header
-
-		if body, err := t.ResponseBody(); err == nil {
-			result.Response.Body = string(body)
-		}
-	}
-
-	return result
-}
-*/
