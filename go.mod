@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/benpate/derp v0.36.0
 	github.com/benpate/rosetta v0.27.0
-	github.com/benpate/uri v0.1.1
+	github.com/benpate/uri v0.1.2
 	github.com/stretchr/testify v1.11.1
 )
 
