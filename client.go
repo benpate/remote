@@ -115,16 +115,34 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 		return nil, derp.BadRequest(location, "No addresses found for host", host)
 	}
 
-	// Check every resolved address for being public, and collect the valid ones.
+	// Keep only the public addresses, dropping any non-public ones.
+	ips := filterPublicIPs(addrs)
+
+	// Reject only when NO public address remains — a host that resolves entirely
+	// to private space is the real SSRF / DNS-rebinding case.
+	if len(ips) == 0 {
+		return nil, derp.BadRequest(location, "Blocked connection to non-public address (2)", host)
+	}
+
+	// Return the public addresses.
+	return ips, nil
+}
+
+// filterPublicIPs returns only the public addresses from addrs. A misconfigured
+// host may advertise a non-public record (e.g. an IPv6 link-local address leaked
+// into DNS) alongside its real public ones; dropping the bad addresses lets us
+// connect via the good ones rather than rejecting the whole host. The result is
+// empty (not nil-erroring) when no address is public, so the caller decides how
+// to treat a fully-private host.
+func filterPublicIPs(addrs []net.IPAddr) []net.IP {
+
 	ips := make([]net.IP, 0, len(addrs))
 
 	for _, addr := range addrs {
-		if !uri.IsPublicIP(addr.IP) {
-			return nil, derp.BadRequest(location, "Blocked connection to non-public address (2)", addr.IP)
+		if uri.IsPublicIP(addr.IP) {
+			ips = append(ips, addr.IP)
 		}
-		ips = append(ips, addr.IP)
 	}
 
-	// All addresses are public, so return the list of IPs.
-	return ips, nil
+	return ips
 }
