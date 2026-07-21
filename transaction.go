@@ -398,16 +398,12 @@ func (t *Transaction) requestContext() (context.Context, context.CancelFunc) {
 // WithRoundTripper middleware wraps that base, so the guard stays underneath.
 func (t *Transaction) buildClient() *http.Client {
 
-	var base http.RoundTripper = safeTransport
+	// Start from the shared base transport (SSRF-hardened unless private IPs are allowed)...
+	transport := baseTransport(t.allowPrivateIPs)
 
-	if t.allowPrivateIPs {
-		base = http.DefaultTransport
-	}
-
-	transport := base
-
+	// ...then layer this transaction's caller-supplied middleware on top, if any.
 	if t.roundTripper != nil {
-		transport = t.roundTripper(base)
+		transport = t.roundTripper(transport)
 	}
 
 	return &http.Client{

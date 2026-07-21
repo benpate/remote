@@ -24,6 +24,49 @@ type dialContextFunc func(ctx context.Context, network string, address string) (
 // and it is shared (not rebuilt per request) so connections are pooled.
 var safeTransport = newGuardedTransport()
 
+// NewHTTPClient returns an *http.Client backed by remote's SSRF-hardened
+// transport, for libraries (e.g. golang.org/x/oauth2) that accept an
+// *http.Client but not a remote.Transaction. Like every remote request, it
+// refuses to connect to non-public addresses unless allowPrivateIPs is TRUE.
+// The returned client is fresh, but shares the pooled safeTransport singleton.
+func NewHTTPClient(allowPrivateIPs bool) *http.Client {
+
+	return &http.Client{
+		Timeout:       defaultTimeout,
+		Transport:     baseTransport(allowPrivateIPs),
+		CheckRedirect: guardedRedirect,
+	}
+}
+
+// guardedRedirect is the http.Client CheckRedirect policy used by standalone
+// clients from NewHTTPClient. It caps the redirect chain at maxRedirects. It
+// does NOT enforce a host allow-list (standalone clients have none); the
+// private-IP guard still re-runs on every hop, since it lives in the dialer.
+func guardedRedirect(_ *http.Request, via []*http.Request) error {
+
+	const location = "remote.guardedRedirect"
+
+	if len(via) >= maxRedirects {
+		return derp.BadRequest(location, "Too many redirects")
+	}
+
+	return nil
+}
+
+// baseTransport picks the round-tripper for a client. The SSRF-hardened
+// safeTransport is the default; http.DefaultTransport is used ONLY when private
+// addresses are explicitly allowed (e.g. local development / self-federation).
+// This is the single decision point shared by NewHTTPClient and buildClient, so
+// the two never drift on which transport guards a request.
+func baseTransport(allowPrivateIPs bool) http.RoundTripper {
+
+	if allowPrivateIPs {
+		return http.DefaultTransport
+	}
+
+	return safeTransport
+}
+
 // newGuardedTransport returns a transport whose dialer rejects connections to
 // non-public addresses. It is cloned from http.DefaultTransport so it keeps the
 // standard pooling, proxy, and TLS defaults.
