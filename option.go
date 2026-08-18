@@ -22,6 +22,10 @@ type Option struct {
 
 	// AfterRequest is executed after an http.Response has been received from the remote server, but before it is
 	// parsed and returned to the calling application.
+	//
+	// RULE: an AfterRequest hook that replaces response.Body OWNS the reader it
+	// replaced. remote closes only the outermost body, so the wrapper's Close
+	// must close the reader it wrapped, or the underlying connection leaks.
 	AfterRequest func(*Transaction, *http.Response) error
 }
 

@@ -288,21 +288,32 @@ func (t *Transaction) Send() error {
 		return derp.Internal(location, "No response received from server")
 	}
 
+	// onAfterRequest modifies the response received from the server. It may
+	// replace response.Body with a wrapper, so the body is not closed until
+	// after this runs -- see the deferred Close below.
+	if err := t.onAfterRequest(t.response); err != nil {
+
+		// The deferred Close is not registered yet, so release the body here.
+		t.closeResponseBody()
+
+		err = derp.WrapHTTPError(err, t.request, t.response)
+		err = derp.Wrap(err, location, "Building options.Response", derp.WithInternalError())
+		return err
+	}
+
 	// Close the response body when we're done, to release the underlying
 	// connection. ResponseBody (below) buffers the body in memory and swaps in a
 	// re-readable NopCloser, so closing the original here does not prevent
 	// callers from reading the response afterward.
+	//
+	// RULE: the body is captured NOW, after AfterRequest has installed any
+	// wrapper but before ResponseBody swaps in its NopCloser. Reading
+	// t.response.Body inside the deferred function instead would close that
+	// NopCloser and leak the real connection.
 	if body := t.response.Body; body != nil {
 		defer func() {
 			_ = body.Close()
 		}()
-	}
-
-	// onAfterRequest modifies the response received from the server.
-	if err := t.onAfterRequest(t.response); err != nil {
-		err = derp.WrapHTTPError(err, t.request, t.response)
-		err = derp.Wrap(err, location, "Building options.Response", derp.WithInternalError())
-		return err
 	}
 
 	// read the body of the response
@@ -321,6 +332,21 @@ func (t *Transaction) Send() error {
 
 	// Glorious success.
 	return nil
+}
+
+// closeResponseBody closes the current response body, if there is one. It is
+// used on error paths that return before the deferred Close is registered.
+func (t *Transaction) closeResponseBody() {
+
+	if t.response == nil {
+		return
+	}
+
+	if t.response.Body == nil {
+		return
+	}
+
+	_ = t.response.Body.Close()
 }
 
 // processResponse decodes the (already-read) response body into the transaction's
