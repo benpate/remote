@@ -19,9 +19,10 @@ const maxRedirects = 5
 // dialContextFunc matches the signature of net.Dialer.DialContext.
 type dialContextFunc func(ctx context.Context, network string, address string) (net.Conn, error)
 
-// safeTransport is the shared, SSRF-hardened base transport used for every
-// request by default. Its dialer refuses to connect to non-public addresses,
-// and it is shared (not rebuilt per request) so connections are pooled.
+// safeTransport is the SSRF-hardened base transport used for every request by
+// default. Its dialer refuses to connect to non-public addresses.
+//
+// It is built once, not per request, so that connections are pooled.
 var safeTransport = newGuardedTransport()
 
 // NewHTTPClient returns an *http.Client backed by remote's SSRF-hardened
@@ -38,14 +39,16 @@ func NewHTTPClient(allowPrivateIPs bool) *http.Client {
 	}
 }
 
-// guardedRedirect is the http.Client CheckRedirect policy used by standalone
-// clients from NewHTTPClient. It caps the redirect chain at maxRedirects. It
-// does NOT enforce a host allow-list (standalone clients have none); the
-// private-IP guard still re-runs on every hop, since it lives in the dialer.
+// guardedRedirect is the http.Client CheckRedirect policy used by the standalone
+// clients from NewHTTPClient. It caps the redirect chain at maxRedirects.
 func guardedRedirect(_ *http.Request, via []*http.Request) error {
 
 	const location = "remote.guardedRedirect"
 
+	// There is no host allow-list to re-check here, because a standalone client has
+	// none. The private-IP guard still fires on every hop, since it lives in the dialer.
+
+	// RULE: A redirect chain has to end somewhere.
 	if len(via) >= maxRedirects {
 		return derp.BadRequest(location, "Too many redirects")
 	}
@@ -53,13 +56,15 @@ func guardedRedirect(_ *http.Request, via []*http.Request) error {
 	return nil
 }
 
-// baseTransport picks the round-tripper for a client. The SSRF-hardened
-// safeTransport is the default; http.DefaultTransport is used ONLY when private
-// addresses are explicitly allowed (e.g. local development / self-federation).
-// This is the single decision point shared by NewHTTPClient and buildClient, so
-// the two never drift on which transport guards a request.
+// baseTransport picks the round-tripper for a client: the SSRF-hardened
+// safeTransport, or http.DefaultTransport when private addresses are allowed.
 func baseTransport(allowPrivateIPs bool) http.RoundTripper {
 
+	// This is the ONE place the guarded-vs-unguarded choice is made. NewHTTPClient and
+	// buildClient both call it, so the two can never drift on which transport is used.
+
+	// RULE: Drop the guard only when the caller has explicitly asked for it
+	// (local development, self-federation, a test server on loopback).
 	if allowPrivateIPs {
 		return http.DefaultTransport
 	}
@@ -68,10 +73,11 @@ func baseTransport(allowPrivateIPs bool) http.RoundTripper {
 }
 
 // newGuardedTransport returns a transport whose dialer rejects connections to
-// non-public addresses. It is cloned from http.DefaultTransport so it keeps the
-// standard pooling, proxy, and TLS defaults.
+// non-public addresses.
 func newGuardedTransport() *http.Transport {
 
+	// Start from a clone of the standard transport, to inherit its pooling,
+	// proxy, and TLS defaults rather than re-deriving them here.
 	var transport *http.Transport
 
 	if base, ok := http.DefaultTransport.(*http.Transport); ok {
@@ -90,17 +96,17 @@ func newGuardedTransport() *http.Transport {
 	return transport
 }
 
-// guardedDialContext wraps an inner DialContext so it refuses to connect to any
-// non-public address, while delegating the actual connection to inner. The host
-// is resolved and every candidate address is checked; the connection is then
-// made to a validated IP literal, so it cannot be re-pointed at a private
-// address via DNS rebinding.
+// guardedDialContext wraps an inner DialContext so that it refuses to connect to
+// a non-public address, delegating the actual connection to inner.
 func guardedDialContext(inner dialContextFunc) dialContextFunc {
 
 	const location = "remote.guardedDialContext"
 
+	// The guard sits in the dialer, not in the request path, so it re-runs on every
+	// redirect hop and on every pooled reconnect, with nothing left to bypass it.
 	return func(ctx context.Context, network string, address string) (net.Conn, error) {
 
+		// Split the address into its host and port.
 		host, port, err := net.SplitHostPort(address)
 
 		if err != nil {
@@ -114,7 +120,9 @@ func guardedDialContext(inner dialContextFunc) dialContextFunc {
 			return nil, derp.Wrap(err, location, "Unable to validate host address", host)
 		}
 
-		// Dial a validated IP literal directly (rebinding-safe), trying each in turn.
+		// Dial a validated IP literal directly, trying each address in turn. Dialing the
+		// literal (not the name) is what makes this safe against DNS rebinding: the address
+		// that was checked is the address that gets connected to.
 		var lastErr error
 
 		for _, ip := range ips {
@@ -132,9 +140,8 @@ func guardedDialContext(inner dialContextFunc) dialContextFunc {
 	}
 }
 
-// publicIPs resolves host to its IP addresses and returns them only if every one
-// is public. A host that is already an IP literal is checked directly. Any
-// non-public address causes an error, so the caller never connects to it.
+// publicIPs resolves host and returns its public IP addresses, erroring when
+// none of them is public.
 func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 
 	const location = "remote.publicIPs"
@@ -167,18 +174,17 @@ func publicIPs(ctx context.Context, host string) ([]net.IP, error) {
 		return nil, derp.BadRequest(location, "Blocked connection to non-public address (2)", host)
 	}
 
-	// Return the public addresses.
+	// These addresses are cleared for takeoff
 	return ips, nil
 }
 
-// filterPublicIPs returns only the public addresses from addrs. A misconfigured
-// host may advertise a non-public record (e.g. an IPv6 link-local address leaked
-// into DNS) alongside its real public ones; dropping the bad addresses lets us
-// connect via the good ones rather than rejecting the whole host. The result is
-// empty (not nil-erroring) when no address is public, so the caller decides how
-// to treat a fully-private host.
+// filterPublicIPs returns only the public addresses from addrs, and an empty
+// slice when none of them is public.
 func filterPublicIPs(addrs []net.IPAddr) []net.IP {
 
+	// A misconfigured host may advertise a non-public record (an IPv6 link-local
+	// address leaked into DNS, say) alongside its real ones. Dropping just the bad
+	// addresses lets the caller connect via the good ones instead of failing outright.
 	ips := make([]net.IP, 0, len(addrs))
 
 	for _, addr := range addrs {

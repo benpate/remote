@@ -30,6 +30,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 		return derp.Wrap(err, location, "Error unmarshalling map", value)
 	}
 
+	// Reconstituted, just add water
 	return nil
 }
 

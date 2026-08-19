@@ -1,4 +1,3 @@
-// Package remote provides a simple and clean API for making HTTP requests to remote servers.
 package remote
 
 import (
@@ -375,6 +374,7 @@ func (t *Transaction) processResponse(body []byte) error {
 		return derp.Wrap(err, location, "Processing response body", body, derp.WithInternalError())
 	}
 
+	// Two hundred and OK
 	return nil
 }
 
@@ -440,24 +440,31 @@ func (t *Transaction) buildClient() *http.Client {
 }
 
 // checkRedirect is the http.Client CheckRedirect policy. It caps the redirect
-// chain and re-applies the host allow-list to each redirect target, so an
-// allow-listed server cannot redirect the request to a host that is not on the
-// list. (The private-IP guard re-runs automatically, since it lives in the dialer.)
+// chain and re-applies the host allow-list to every redirect target.
 func (t *Transaction) checkRedirect(request *http.Request, via []*http.Request) error {
 
 	const location = "remote.Transaction.checkRedirect"
 
+	// The allow-list is re-checked per hop so that an allow-listed server cannot
+	// bounce the request to a host that is not on the list. The private-IP guard needs
+	// no such treatment -- it re-runs on its own, because it lives in the dialer.
+
+	// RULE: A redirect chain has to end somewhere.
 	if len(via) >= maxRedirects {
 		return derp.BadRequest(location, "Too many redirects")
 	}
 
+	// RULE: Every hop must land on an allow-listed host.
 	if !t.hostIsAllowed(request.URL.Hostname()) {
 		return derp.Forbidden(location, "Redirect to host not in the allow-list", request.URL.Hostname())
 	}
 
+	// Follow that car!
 	return nil
 }
 
+// assembleRequest validates the transaction and builds the http.Request that
+// will be sent to the remote server, bound to the given context.
 func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error) {
 
 	const location = "remote.Transaction.assembleRequest"
@@ -479,8 +486,7 @@ func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error
 		return nil, derp.Wrap(err, location, "Host is not allowed", t.url)
 	}
 
-	// GET methods don't have an HTTP Body.  For all other methods,
-	// it's time to defined the body content.
+	// Encode the request body -- every method except GET may carry one.
 	if t.method != http.MethodGet {
 
 		body, err := t.RequestBody()
@@ -499,11 +505,12 @@ func (t *Transaction) assembleRequest(ctx context.Context) (*http.Request, error
 		return nil, derp.Wrap(err, location, "Creating HTTP request", derp.WithInternalError())
 	}
 
-	// Add headers to httpRequest
+	// Copy the transaction's headers onto the request.
 	for key, value := range t.header {
 		result.Header.Add(key, value)
 	}
 
+	// Ready for launch
 	return result, nil
 }
 
@@ -583,6 +590,8 @@ func (t *Transaction) assembleBearCap() error {
 	return nil
 }
 
+// statusCode returns the HTTP status code of the response, or zero if no
+// response has been received.
 func (t *Transaction) statusCode() int {
 
 	if t.response != nil {

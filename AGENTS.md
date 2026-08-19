@@ -27,6 +27,14 @@ It is exported to callers only as a fresh `*http.Client` from `NewHTTPClient` (c
 
 The error path out of `onAfterRequest` returns before the defer is registered, so it closes the body itself via `closeResponseBody`. `TestSend_ClosesAfterRequestWrapper` and `TestSend_ClosesResponseBodyWhenAfterRequestFails` pin both behaviors.
 
+## `RequestBody` replaces an `io.Reader` body with its bytes
+
+Reading a stream consumes it, so `RequestBody` stores what it read back into `t.body`. Without that, the SECOND caller gets an empty body and no error — and there is more than one caller: `MarshalMap` (used to log or queue a transaction) reads the body, and so does `assembleRequest`. Marshalling a transaction for a log line before sending it would otherwise send an empty request. `TestRequestBody_ReaderIsRepeatable` pins this.
+
+## `MaxResponseSize` is clamped below `MaxInt64`
+
+`ResponseBody` reads `maxSize+1` bytes so it can tell "at the limit" from "over the limit". A caller passing `math.MaxInt64` to mean "no practical limit" would overflow that into a negative count, and `io.LimitReader` reads NOTHING when N is negative — every response would come back empty, with no error. The `min(maxSize, math.MaxInt64-1)` clamp is load-bearing; `TestMaxResponseSize_HugeLimitDoesNotOverflow` pins it.
+
 ## The seam
 
 SSRF hardening is centralized in [client.go](client.go) (`safeTransport`, `guardedDialContext`, `publicIPs`, `filterPublicIPs`, `baseTransport`). Public/non-public IP classification is delegated to `benpate/uri` (`uri.IsPublicIP`). To change what counts as "non-public," change it there, not here.

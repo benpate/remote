@@ -42,6 +42,7 @@ func (t *Transaction) onBeforeRequest() error {
 		}
 	}
 
+	// All hooks agree: proceed
 	return nil
 }
 
@@ -73,6 +74,7 @@ func (t *Transaction) onAfterRequest(response *http.Response) error {
 		}
 	}
 
+	// Nothing to see here, move along
 	return nil
 }
 
