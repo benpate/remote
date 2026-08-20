@@ -76,7 +76,7 @@ if err != nil {
 Remote is built for calling untrusted, user-supplied URLs safely. These guards are on by default.
 
 * **Private IPs are blocked.** By default the client refuses to connect to loopback, private, and link-local addresses — defending against SSRF. The check lives in the dialer and re-runs on every redirect hop, so it is safe against DNS rebinding. Call `.AllowPrivateIPs(true)` to opt out (e.g. for localhost or internal services).
-* **Host allow-listing.** `.AllowHosts("example.com", ...)` restricts a transaction to specific hosts. The list is re-checked on every redirect, so an allow-listed server cannot redirect you somewhere unexpected.
+* **Host allow-listing.** `.AllowHosts("example.com", ...)` restricts a transaction to specific hosts. A bare entry matches that host on any port; an entry that names a port (`"example.com:8443"`) matches only that port. The list is re-checked on every redirect, so an allow-listed server cannot redirect you somewhere unexpected.
 * **Response size is capped** at 1GB by default, preventing a hostile server from exhausting memory. Tune it with `.MaxResponseSize(n)`.
 * **Redirects are capped** at 5 hops.
 * **Requests are time-bounded.** Without a context, a one-minute timeout applies. Supply your own deadline or cancellation with `.WithContext(ctx)`.

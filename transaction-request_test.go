@@ -40,6 +40,39 @@ func TestRequestBody_Reader(t *testing.T) {
 	require.Equal(t, []byte("from reader"), body)
 }
 
+func TestRequestBody_ReaderIsRepeatable(t *testing.T) {
+
+	// Reading a stream consumes it, so RequestBody keeps the bytes. A second call
+	// (MarshalMap logging the transaction, or a retried Send) must see the same
+	// body, not an empty one.
+	tx := New()
+	tx.body = strings.NewReader("from reader")
+
+	first, err := tx.RequestBody()
+	require.NoError(t, err)
+	require.Equal(t, []byte("from reader"), first)
+
+	second, err := tx.RequestBody()
+	require.NoError(t, err)
+	require.Equal(t, []byte("from reader"), second)
+}
+
+func TestRequestBody_ReaderResultIsACopy(t *testing.T) {
+
+	// The bytes handed back are a copy, so a caller mutating them cannot alter
+	// the body that the transaction will actually send.
+	tx := New()
+	tx.body = strings.NewReader("from reader")
+
+	first, err := tx.RequestBody()
+	require.NoError(t, err)
+	first[0] = 'X'
+
+	second, err := tx.RequestBody()
+	require.NoError(t, err)
+	require.Equal(t, []byte("from reader"), second)
+}
+
 func TestRequestBody_EmptyPlain(t *testing.T) {
 	// With no content type, the body is empty
 	tx := New()

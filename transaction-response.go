@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 
@@ -58,12 +59,30 @@ func (t *Transaction) ResponseStatusCode() int {
 // from a response body, to prevent an untrusted server from exhausting memory.
 const defaultMaxResponseSize = 1 << 30
 
-// ResponseBody returns the original response body, as a byte array.
-// This method replaces the original body reader, meaning that it can be called
-// multiple times without error.
+// ResponseBody returns the original response body, as a byte array. It replaces
+// the body reader as it goes, so it can be called repeatedly without error. The
+// result is a copy, which the caller owns outright.
 func (t *Transaction) ResponseBody() ([]byte, error) {
 
-	const location = "remote.Transaction.ResponseBody"
+	body, err := t.responseBody()
+
+	if err != nil {
+		return []byte{}, err
+	}
+
+	// Copy, so that a caller writing to the result cannot change what a later call
+	// returns, or what the transaction itself decodes.
+	return bytes.Clone(body), nil
+}
+
+// responseBody reads and buffers the response body, returning the transaction's
+// own slice rather than a copy of it.
+func (t *Transaction) responseBody() ([]byte, error) {
+
+	const location = "remote.Transaction.responseBody"
+
+	// Internal callers use this to avoid duplicating a body that they only read.
+	// Anything handed outside the package goes through ResponseBody instead.
 
 	// Guard against NPE
 	if t.response == nil {
@@ -75,6 +94,11 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 	if maxSize <= 0 {
 		maxSize = defaultMaxResponseSize
 	}
+
+	// RULE: Keep the limit one below MaxInt64, so the "+1" below cannot overflow
+	// into a negative count. io.LimitReader reads nothing at all when N is
+	// negative, which would turn "no practical limit" into an empty body.
+	maxSize = min(maxSize, math.MaxInt64-1)
 
 	// Read up to maxSize+1 bytes, so a body that exceeds the limit can be detected.
 	originalBytes, err := io.ReadAll(io.LimitReader(t.response.Body, maxSize+1))
@@ -97,7 +121,8 @@ func (t *Transaction) ResponseBody() ([]byte, error) {
 // ResponseBodyReader returns an io.Reader for the response body.
 func (t *Transaction) ResponseBodyReader() io.Reader {
 
-	if body, err := t.ResponseBody(); err == nil {
+	// The internal buffer is safe to share here, because a bytes.Reader only reads.
+	if body, err := t.responseBody(); err == nil {
 		return bytes.NewReader(body)
 	}
 
@@ -126,7 +151,10 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 		return nil
 
 	case *[]byte:
-		*result = body
+		// Copy, so the caller owns the result outright. Handing back `body` would
+		// alias the buffer that ResponseBody kept for re-reads, letting a caller
+		// who writes to their own result silently rewrite the response.
+		*result = bytes.Clone(body)
 		return nil
 
 	case *string:

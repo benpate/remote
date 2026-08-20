@@ -27,6 +27,14 @@ It is exported to callers only as a fresh `*http.Client` from `NewHTTPClient` (c
 
 The error path out of `onAfterRequest` returns before the defer is registered, so it closes the body itself via `closeResponseBody`. `TestSend_ClosesAfterRequestWrapper` and `TestSend_ClosesResponseBodyWhenAfterRequestFails` pin both behaviors.
 
+## `ResponseBody` copies; `responseBody` does not
+
+The exported `ResponseBody` returns `bytes.Clone` of the buffer, so a caller owns what it hands back. The unexported `responseBody` returns the buffer itself, and is what `Send` and `ResponseBodyReader` call — neither writes to it, so neither should pay to duplicate a body that may be up to `MaxResponseSize` (1GB by default). Keep in-package readers on `responseBody`; anything crossing the package boundary goes through `ResponseBody`. `decodeResponseBody` clones separately for its `*[]byte` case, because that slice becomes the caller's result object.
+
+## `AllowHosts` entries are port-optional, and the port is inferred from the scheme
+
+A bare entry (`"example.com"`) matches any port; an entry with a port (`"example.com:8443"`) matches only that one. `hostIsAllowed` therefore takes the whole `*url.URL`, not a hostname string — it needs the scheme to fill in an omitted default port, so that `AllowHosts("example.com:443")` still matches `https://example.com/`. Don't "simplify" it back to a string parameter; the scheme is load-bearing.
+
 ## `RequestBody` replaces an `io.Reader` body with its bytes
 
 Reading a stream consumes it, so `RequestBody` stores what it read back into `t.body`. Without that, the SECOND caller gets an empty body and no error — and there is more than one caller: `MarshalMap` (used to log or queue a transaction) reads the body, and so does `assembleRequest`. Marshalling a transaction for a log line before sending it would otherwise send an empty request. `TestRequestBody_ReaderIsRepeatable` pins this.

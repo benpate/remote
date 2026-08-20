@@ -34,7 +34,13 @@ func (t *Transaction) RequestBody() ([]byte, error) {
 			return nil, derp.Wrap(err, location, "Reading request body from io.Reader")
 		}
 
-		return result, nil
+		// Reading a stream consumes it, so keep the bytes as the new body. Without
+		// this, a second call -- MarshalMap logging the transaction, or a retried
+		// Send -- would drain the reader and quietly send an empty request.
+		t.body = result
+
+		// Return a copy, for the same reason as the []byte case below.
+		return bytes.Clone(result), nil
 
 	case string:
 		return []byte(typedValue), nil

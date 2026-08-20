@@ -166,3 +166,67 @@ func TestDecodeResponseBody_UnsupportedContentType(t *testing.T) {
 	result := map[string]any{}
 	require.Error(t, tx.decodeResponseBody([]byte("data"), &result))
 }
+
+func TestDecodeResponseBody_ByteSliceIsACopy(t *testing.T) {
+
+	// The caller owns their result outright. Writing to it must not reach back
+	// into the buffer that ResponseBody keeps for re-reads.
+	tx := New()
+	tx.response = &http.Response{
+		Header: http.Header{},
+		Body:   io.NopCloser(strings.NewReader("original")),
+	}
+
+	body, err := tx.ResponseBody()
+	require.NoError(t, err)
+
+	var result []byte
+	require.NoError(t, tx.decodeResponseBody(body, &result))
+	require.Equal(t, "original", string(result))
+
+	// Scribble on the caller's copy. (copy, not an index, so that a nil result
+	// would fail the assertion above rather than panicking here.)
+	copy(result, "XXXXXXXX")
+
+	reread, err := tx.ResponseBody()
+	require.NoError(t, err)
+	require.Equal(t, "original", string(reread))
+}
+
+func TestResponseBody_ReturnsACopy(t *testing.T) {
+
+	// The caller owns what ResponseBody hands back. Writing to it must not change
+	// what a later call returns.
+	tx := New()
+	tx.response = &http.Response{
+		Header: http.Header{},
+		Body:   io.NopCloser(strings.NewReader("original")),
+	}
+
+	first, err := tx.ResponseBody()
+	require.NoError(t, err)
+	require.Equal(t, "original", string(first))
+
+	copy(first, "XXXXXXXX")
+
+	second, err := tx.ResponseBody()
+	require.NoError(t, err)
+	require.Equal(t, "original", string(second))
+}
+
+func TestResponseBodyReader_UnaffectedByCallerWrites(t *testing.T) {
+
+	tx := New()
+	tx.response = &http.Response{
+		Header: http.Header{},
+		Body:   io.NopCloser(strings.NewReader("original")),
+	}
+
+	body, err := tx.ResponseBody()
+	require.NoError(t, err)
+	copy(body, "XXXXXXXX")
+
+	reread, err := io.ReadAll(tx.ResponseBodyReader())
+	require.NoError(t, err)
+	require.Equal(t, "original", string(reread))
+}

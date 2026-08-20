@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/benpate/derp"
 	"github.com/benpate/uri"
@@ -205,9 +205,13 @@ func (t *Transaction) With(options ...Option) *Transaction {
 }
 
 // AllowHosts restricts this transaction to the named hosts. When set, Send
-// returns an error before contacting the server if the request URL's host is
-// not in the list. This guards against requests to unexpected servers, for
-// instance when the URL is user-supplied. Matching is case-insensitive.
+// returns an error before contacting the server if the request URL's host is not
+// in the list. This guards against requests to unexpected servers, for instance
+// when the URL is user-supplied.
+//
+// An entry may name a bare hostname ("example.com"), which matches that host on
+// any port, or a hostname and port ("example.com:8080"), which matches only that
+// port. Matching is case-insensitive.
 func (t *Transaction) AllowHosts(hosts ...string) *Transaction {
 	for _, host := range hosts {
 		t.allowedHosts = append(t.allowedHosts, strings.ToLower(host))
@@ -315,8 +319,9 @@ func (t *Transaction) Send() error {
 		}()
 	}
 
-	// read the body of the response
-	body, err := t.ResponseBody()
+	// Read the body of the response. This is the in-package path, so it borrows the
+	// transaction's buffer instead of copying a body that only gets decoded.
+	body, err := t.responseBody()
 
 	if err != nil {
 		err = derp.WrapHTTPError(err, t.request, t.response)
@@ -403,20 +408,16 @@ func (t *Transaction) executeRequest() error {
 	return nil
 }
 
-// defaultRequestTimeout bounds a request when the caller has not supplied a
-// context (via WithContext) carrying its own deadline.
-const defaultRequestTimeout = 1 * time.Minute
-
 // requestContext returns the context for this request and a cancel function that
 // must always be called. A caller-supplied context (via WithContext) is used as
-// is; otherwise a background context bounded by defaultRequestTimeout is used.
+// is; otherwise a background context bounded by defaultTimeout is used.
 func (t *Transaction) requestContext() (context.Context, context.CancelFunc) {
 
 	if t.ctx != nil {
 		return context.WithCancel(t.ctx)
 	}
 
-	return context.WithTimeout(context.Background(), defaultRequestTimeout)
+	return context.WithTimeout(context.Background(), defaultTimeout)
 }
 
 // buildClient assembles the http.Client used to execute the request. The base
@@ -455,8 +456,8 @@ func (t *Transaction) checkRedirect(request *http.Request, via []*http.Request) 
 	}
 
 	// RULE: Every hop must land on an allow-listed host.
-	if !t.hostIsAllowed(request.URL.Hostname()) {
-		return derp.Forbidden(location, "Redirect to host not in the allow-list", request.URL.Hostname())
+	if !t.hostIsAllowed(request.URL) {
+		return derp.Forbidden(location, "Redirect to host not in the allow-list", request.URL.Host)
 	}
 
 	// Follow that car!
@@ -530,22 +531,65 @@ func (t *Transaction) validateAllowedHosts() error {
 		return derp.Wrap(err, location, "Parsing URL", t.url, derp.WithInternalError())
 	}
 
-	if t.hostIsAllowed(parsed.Hostname()) {
+	if t.hostIsAllowed(parsed) {
 		return nil
 	}
 
-	return derp.Forbidden(location, "Host is not in the allow-list", parsed.Hostname())
+	return derp.Forbidden(location, "Host is not in the allow-list", parsed.Host)
 }
 
-// hostIsAllowed reports whether the given host satisfies the transaction's host
+// hostIsAllowed reports whether the given URL satisfies the transaction's host
 // allow-list. An empty allow-list permits any host. Matching is case-insensitive.
-func (t *Transaction) hostIsAllowed(host string) bool {
+func (t *Transaction) hostIsAllowed(value *url.URL) bool {
 
+	// RULE: An empty allow-list places no restriction on the host.
 	if len(t.allowedHosts) == 0 {
 		return true
 	}
 
-	return slices.Contains(t.allowedHosts, strings.ToLower(host))
+	// RULE: A nil URL can never be matched against the list.
+	if value == nil {
+		return false
+	}
+
+	hostname := strings.ToLower(value.Hostname())
+
+	// An allow-list entry with no port matches this host on ANY port.
+	if slices.Contains(t.allowedHosts, hostname) {
+		return true
+	}
+
+	// An entry that names a port must match it exactly.
+	port := portOrDefault(value)
+
+	if port == "" {
+		return false
+	}
+
+	return slices.Contains(t.allowedHosts, net.JoinHostPort(hostname, port))
+}
+
+// portOrDefault returns the URL's port, falling back to the default port for its
+// scheme, or "" when the scheme has no default.
+func portOrDefault(value *url.URL) string {
+
+	// An explicitly-spelled port always wins.
+	if port := value.Port(); port != "" {
+		return port
+	}
+
+	// Otherwise infer it from the scheme, so that an allow-list entry of
+	// "example.com:443" still matches an https URL that omits the default port.
+	switch strings.ToLower(value.Scheme) {
+
+	case "http":
+		return "80"
+
+	case "https":
+		return "443"
+	}
+
+	return ""
 }
 
 // assembleBearCap pre-processes special bearer capability URLs.

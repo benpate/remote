@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,6 +56,18 @@ func TestMaxResponseSize_ZeroRestoresDefault(t *testing.T) {
 	// is read normally.
 	var result []byte
 	err := Get(server.URL).AllowPrivateIPs(true).MaxResponseSize(0).Result(&result).Send()
+	require.Nil(t, err)
+	require.Len(t, result, 100)
+}
+
+func TestMaxResponseSize_HugeLimitDoesNotOverflow(t *testing.T) {
+	server := sizedServer(t, 100)
+
+	// A caller asking for "no practical limit" must still get the body. Reading
+	// maxSize+1 bytes would overflow MaxInt64 into a negative count, and
+	// io.LimitReader reads nothing at all when N is negative.
+	var result []byte
+	err := Get(server.URL).AllowPrivateIPs(true).MaxResponseSize(math.MaxInt64).Result(&result).Send()
 	require.Nil(t, err)
 	require.Len(t, result, 100)
 }

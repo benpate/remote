@@ -59,8 +59,8 @@ func TestRequestContext_DefaultTimeout(t *testing.T) {
 
 	deadline, ok := ctx.Deadline()
 	require.True(t, ok)
-	require.WithinDuration(t, time.Now().Add(defaultRequestTimeout), deadline, 5*time.Second)
-	require.Equal(t, time.Minute, defaultRequestTimeout)
+	require.WithinDuration(t, time.Now().Add(defaultTimeout), deadline, 5*time.Second)
+	require.Equal(t, time.Minute, defaultTimeout)
 }
 
 func TestRequestContext_HonorsCallerContext(t *testing.T) {

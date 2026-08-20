@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -79,4 +80,67 @@ func TestAllowHosts_EmptyListAllowsAny(t *testing.T) {
 
 	require.Nil(t, err)
 	require.Equal(t, string(body), result)
+}
+
+func TestAllowHosts_BareEntryMatchesAnyPort(t *testing.T) {
+	// An entry with no port places no restriction on the port.
+	require.NoError(t, Get("https://example.com:8443/path").AllowHosts("example.com").validateAllowedHosts())
+	require.NoError(t, Get("https://example.com/path").AllowHosts("example.com").validateAllowedHosts())
+}
+
+func TestAllowHosts_EntryWithPortMatchesExactly(t *testing.T) {
+	// An entry that names a port matches that port, and only that port.
+	require.NoError(t, Get("https://example.com:8443/path").AllowHosts("example.com:8443").validateAllowedHosts())
+	require.Error(t, Get("https://example.com:9999/path").AllowHosts("example.com:8443").validateAllowedHosts())
+	require.Error(t, Get("https://example.com/path").AllowHosts("example.com:8443").validateAllowedHosts())
+}
+
+func TestAllowHosts_EntryWithDefaultPort(t *testing.T) {
+	// A URL that omits the scheme's default port still matches an entry that
+	// spells it out, since the two name the same endpoint.
+	require.NoError(t, Get("https://example.com/path").AllowHosts("example.com:443").validateAllowedHosts())
+	require.NoError(t, Get("http://example.com/path").AllowHosts("example.com:80").validateAllowedHosts())
+
+	// ...but the ports still have to agree.
+	require.Error(t, Get("http://example.com/path").AllowHosts("example.com:443").validateAllowedHosts())
+}
+
+func TestAllowHosts_PortMatchingIsCaseInsensitive(t *testing.T) {
+	require.NoError(t, Get("https://Example.COM:8443/path").AllowHosts("EXAMPLE.com:8443").validateAllowedHosts())
+}
+
+func TestAllowHosts_IPv6WithPort(t *testing.T) {
+	// An IPv6 entry is bracketed, exactly as it appears in the URL.
+	require.NoError(t, Get("http://[::1]:8080/path").AllowHosts("[::1]:8080").validateAllowedHosts())
+	require.Error(t, Get("http://[::1]:9999/path").AllowHosts("[::1]:8080").validateAllowedHosts())
+
+	// A bare IPv6 entry is unbracketed, because that is what URL.Hostname returns.
+	require.NoError(t, Get("http://[::1]:8080/path").AllowHosts("::1").validateAllowedHosts())
+}
+
+func TestAllowHosts_UnknownSchemeWithPortEntry(t *testing.T) {
+	// A scheme with no default port cannot satisfy a port-qualified entry.
+	require.Error(t, Get("ftp://example.com/path").AllowHosts("example.com:21").validateAllowedHosts())
+
+	// A bare entry still matches, since it does not ask about the port.
+	require.NoError(t, Get("ftp://example.com/path").AllowHosts("example.com").validateAllowedHosts())
+}
+
+func TestAllowHosts_RejectsRedirectToDifferentPort(t *testing.T) {
+	// The allow-list is re-checked on every hop, ports included.
+	redirectFollowed := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/redirected" {
+			redirectFollowed = true
+			return
+		}
+		http.Redirect(w, r, "http://127.0.0.1:1/redirected", http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+
+	_, port, _ := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+
+	err := Get(server.URL).AllowPrivateIPs(true).AllowHosts("127.0.0.1:" + port).Send()
+	require.Error(t, err)
+	require.False(t, redirectFollowed, "request must not follow a redirect to a different port")
 }

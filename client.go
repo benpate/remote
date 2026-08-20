@@ -10,7 +10,8 @@ import (
 	"github.com/benpate/uri"
 )
 
-// defaultTimeout is the default time limit applied to a request and its dialer.
+// defaultTimeout is the time limit applied to every request: the http.Client, the
+// dialer, and the fallback context used when the caller supplies none.
 const defaultTimeout = 1 * time.Minute
 
 // maxRedirects caps how many redirects a request will follow.
