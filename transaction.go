@@ -239,9 +239,11 @@ func (t *Transaction) MaxResponseSize(bytes int64) *Transaction {
 }
 
 // WithContext attaches a context to the transaction, used to cancel the request
-// or apply a deadline. If no context is set, a background context with a default
-// one-minute timeout is used.
+// or apply a deadline.
 func (t *Transaction) WithContext(ctx context.Context) *Transaction {
+
+	// buildClient applies defaultTimeout to the http.Client regardless, so a context can
+	// only shorten a request, never lengthen it. With no context, that default is the bound.
 	t.ctx = ctx
 	return t
 }
