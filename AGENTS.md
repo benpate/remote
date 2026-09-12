@@ -33,7 +33,7 @@ The exported `ResponseBody` returns `bytes.Clone` of the buffer, so a caller own
 
 ## `AllowHosts` entries are port-optional, and the port is inferred from the scheme
 
-A bare entry (`"example.com"`) matches any port; an entry with a port (`"example.com:8443"`) matches only that one. `hostIsAllowed` therefore takes the whole `*url.URL`, not a hostname string — it needs the scheme to fill in an omitted default port, so that `AllowHosts("example.com:443")` still matches `https://example.com/`. Don't "simplify" it back to a string parameter; the scheme is load-bearing.
+A bare entry (`"example.com"`) matches any port; an entry with a port (`"example.com:8443"`) matches only that one. `hostIsAllowed` therefore takes the whole `*url.URL`, not a hostname string — it needs the scheme to fill in an omitted default port, so that `AllowHosts("example.com:443")` still matches `https://example.com/`. Don't "simplify" it back to a string parameter; the scheme is important.
 
 ## `RequestBody` replaces an `io.Reader` body with its bytes
 
@@ -41,7 +41,7 @@ Reading a stream consumes it, so `RequestBody` stores what it read back into `t.
 
 ## `MaxResponseSize` is clamped below `MaxInt64`
 
-`ResponseBody` reads `maxSize+1` bytes so it can tell "at the limit" from "over the limit". A caller passing `math.MaxInt64` to mean "no practical limit" would overflow that into a negative count, and `io.LimitReader` reads NOTHING when N is negative — every response would come back empty, with no error. The `min(maxSize, math.MaxInt64-1)` clamp is load-bearing; `TestMaxResponseSize_HugeLimitDoesNotOverflow` pins it.
+`ResponseBody` reads `maxSize+1` bytes so it can tell "at the limit" from "over the limit". A caller passing `math.MaxInt64` to mean "no practical limit" would overflow that into a negative count, and `io.LimitReader` reads NOTHING when N is negative — every response would come back empty, with no error. The `min(maxSize, math.MaxInt64-1)` clamp is important; `TestMaxResponseSize_HugeLimitDoesNotOverflow` pins it.
 
 ## The seam
 
