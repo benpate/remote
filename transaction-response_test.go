@@ -2,11 +2,14 @@ package remote
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/benpate/derp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -129,6 +132,31 @@ func TestDecodeResponseBody_JSONWithCharset(t *testing.T) {
 	require.Equal(t, "value", result["name"])
 }
 
+// TestDecodeResponseBody_MediaTypeIsCaseInsensitive confirms that a media type matches its decoder
+// regardless of case, and of spaces around it.
+func TestDecodeResponseBody_MediaTypeIsCaseInsensitive(t *testing.T) {
+
+	for _, contentType := range []string{
+		"Application/JSON",
+		"APPLICATION/ACTIVITY+JSON; charset=utf-8",
+		"application/json ; charset=utf-8",
+		" application/ld+json",
+	} {
+		tx := newResponseTransaction(200, contentType, "")
+		result := map[string]any{}
+		require.NoError(t, tx.decodeResponseBody([]byte(`{"name":"value"}`), &result), contentType)
+		require.Equal(t, "value", result["name"], contentType)
+	}
+
+	// XML matches the same way
+	tx := newResponseTransaction(200, "Application/XML", "")
+	result := struct {
+		Name string `xml:"name"`
+	}{}
+	require.NoError(t, tx.decodeResponseBody([]byte(`<doc><name>value</name></doc>`), &result))
+	require.Equal(t, "value", result.Name)
+}
+
 func TestDecodeResponseBody_JSONError(t *testing.T) {
 	tx := newResponseTransaction(200, ContentTypeJSON, "")
 	result := map[string]any{}
@@ -165,6 +193,65 @@ func TestDecodeResponseBody_UnsupportedContentType(t *testing.T) {
 	tx := newResponseTransaction(200, "application/octet-stream", "")
 	result := map[string]any{}
 	require.Error(t, tx.decodeResponseBody([]byte("data"), &result))
+}
+
+// TestDecodeResponseBody_FailureOmitsResult confirms that a failed decode records only derp's
+// capped excerpt of the body, even when the result has already absorbed the rest of it.
+func TestDecodeResponseBody_FailureOmitsResult(t *testing.T) {
+
+	// The marker sits past derp's 4KB excerpt, so it can only reach the error by another route
+	const marker = "PAST-THE-EXCERPT"
+	padding := strings.Repeat("x", 8*1024)
+
+	// requireNoMarker checks the error as derp-mongo would store it, and that the excerpt survives
+	requireNoMarker := func(name string, err error) {
+		t.Helper()
+		require.Error(t, err, name)
+
+		serialized, marshalError := json.Marshal(err)
+		require.NoError(t, marshalError, name)
+		require.NotContains(t, string(serialized), marker, name)
+
+		var httpError derp.HTTPError
+		require.True(t, errors.As(err, &httpError), name)
+		require.True(t, httpError.Response.BodyTruncated, name)
+	}
+
+	// A JSON type error: Unmarshal fills "name" before it rejects "followers"
+	jsonBody := `{"name":"` + padding + marker + `","followers":"lots"}`
+	actor := struct {
+		Name      string `json:"name"`
+		Followers int    `json:"followers"`
+	}{}
+	err := newResponseTransaction(200, ContentTypeJSON, jsonBody).decodeResponseBody([]byte(jsonBody), &actor)
+	require.Contains(t, actor.Name, marker, "precondition: the result holds the body")
+	requireNoMarker("json", err)
+
+	// An XML syntax error late in the document: Unmarshal has already filled "title"
+	xmlBody := `<feed><title>` + padding + marker + `</title><broken`
+	feed := struct {
+		Title string `xml:"title"`
+	}{}
+	err = newResponseTransaction(200, ContentTypeXML, xmlBody).decodeResponseBody([]byte(xmlBody), &feed)
+	require.Contains(t, feed.Title, marker, "precondition: the result holds the body")
+	requireNoMarker("xml", err)
+
+	// A writer that fails after it has seen the whole body
+	writer := &recordingWriter{}
+	err = newResponseTransaction(200, ContentTypePlain, jsonBody).decodeResponseBody([]byte(jsonBody), writer)
+	require.Contains(t, writer.Received, marker, "precondition: the writer holds the body")
+	requireNoMarker("writer", err)
+}
+
+// recordingWriter keeps everything written to it, then fails the write
+type recordingWriter struct {
+	Received string // Every byte written so far, exported so that JSON would carry it
+}
+
+// Write records the bytes, then reports a failure
+func (w *recordingWriter) Write(p []byte) (int, error) {
+	w.Received += string(p)
+	return 0, derp.Internal("remote.recordingWriter.Write", "Disk full")
 }
 
 func TestDecodeResponseBody_ByteSliceIsACopy(t *testing.T) {

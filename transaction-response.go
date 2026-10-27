@@ -135,6 +135,10 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 
 	const location = "remote.Transaction.decodeResponseBody"
 
+	// No error built here carries the body, or the result decoded from it, as a detail: a detail is
+	// uncapped, and a partly decoded result can hold most of the body. derp's HTTPError keeps a
+	// capped excerpt instead.
+
 	// If we don't actually have a result (common for error documents) then there's nothing to do.
 	if result == nil {
 		return nil
@@ -146,7 +150,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	case io.Writer:
 		if _, err := result.Write(body); err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
-			err = derp.Wrap(err, location, "Unable to write response body to io.Writer", result, derp.WithInternalError())
+			err = derp.Wrap(err, location, "Unable to write response body to io.Writer", derp.WithInternalError())
 			return err
 		}
 		return nil
@@ -164,8 +168,9 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	}
 
 	// Otherwise, try to use the content type to pick an unmarshaller
-	contentType := t.response.Header.Get(ContentType) // Get the content type from the header
-	contentType, _, _ = strings.Cut(contentType, ";") // Strip out suffixes, such as "; charset=utf-8"
+	contentType := t.response.Header.Get(ContentType)             // Get the content type from the header
+	contentType, _, _ = strings.Cut(contentType, ";")             // Strip out suffixes, such as "; charset=utf-8"
+	contentType = strings.ToLower(strings.TrimSpace(contentType)) // Media types are case-insensitive, and may have spaces before the ";"
 
 	switch contentType {
 
@@ -173,8 +178,6 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 		// Text can only be read into an io.Writer, *string, or *[]byte, which were handled above
 		return t.undecodableResponse(location, contentType)
 
-	// RULE: The body is never a detail on these errors.  The HTTPError already keeps a capped copy,
-	// and a detail is uncapped -- so a large page reached the error log whole, bypassing derp's limit.
 	case
 		ContentTypeXML,
 		contentTypeNonStandardXMLText,
@@ -184,7 +187,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
-			err = derp.Wrap(err, location, "Unable to unmarshal XML Response", result, derp.WithInternalError())
+			err = derp.Wrap(err, location, "Unable to unmarshal XML Response", derp.WithInternalError())
 			return err
 		}
 
@@ -201,7 +204,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
-			err = derp.Wrap(err, location, "Unable to unmarshal JSON Response", result, derp.WithInternalError())
+			err = derp.Wrap(err, location, "Unable to unmarshal JSON Response", derp.WithInternalError())
 			return err
 		}
 

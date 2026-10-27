@@ -78,8 +78,8 @@ func TestUndecodableResponse_NoContentType(t *testing.T) {
 // lengthen the message past a fixed bound, or leave invalid UTF-8 in it.
 func TestUndecodableResponse_ContentTypeIsBounded(t *testing.T) {
 
-	// RULE: RootMessage feeds user-facing text and the triage signature, so an unbounded header
-	// would let a hostile server create a new error class with every request.
+	// RULE: RootMessage feeds user-facing text and the triage signature, so a hostile header must
+	// not make it arbitrarily long.
 	err := fetchIntoMap(serve(t, http.StatusOK, "application/"+strings.Repeat("x", 10_000), "body"))
 	require.Error(t, err)
 	require.True(t, IsUndecodableResponse(err))
