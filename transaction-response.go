@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"io"
 	"math"
 	"net/http"
@@ -169,11 +170,11 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	switch contentType {
 
 	case ContentTypePlain, ContentTypeHTML:
-		var err error
-		err = derp.NewHTTPError(t.request, t.response)
-		err = derp.Wrap(err, location, "HTML must be read into an io.Writer, *string, or *byte[]", string(body), result, derp.WithInternalError())
-		return err
+		// Text can only be read into an io.Writer, *string, or *[]byte, which were handled above
+		return t.undecodableResponse(location, contentType)
 
+	// RULE: The body is never a detail on these errors.  The HTTPError already keeps a capped copy,
+	// and a detail is uncapped -- so a large page reached the error log whole, bypassing derp's limit.
 	case
 		ContentTypeXML,
 		contentTypeNonStandardXMLText,
@@ -183,7 +184,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 		// Parse the result and return to the caller.
 		if err := xml.Unmarshal(body, result); err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
-			err = derp.Wrap(err, location, "Unable to unmarshal XML Response", string(body), result, derp.WithInternalError())
+			err = derp.Wrap(err, location, "Unable to unmarshal XML Response", result, derp.WithInternalError())
 			return err
 		}
 
@@ -200,7 +201,7 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 		// Parse the result and return to the caller.
 		if err := json.Unmarshal(body, result); err != nil {
 			err = derp.WrapHTTPError(err, t.request, t.response)
-			err = derp.Wrap(err, location, "Unable to unmarshal JSON Response", string(body), result, derp.WithInternalError())
+			err = derp.Wrap(err, location, "Unable to unmarshal JSON Response", result, derp.WithInternalError())
 			return err
 		}
 
@@ -208,5 +209,47 @@ func (t *Transaction) decodeResponseBody(body []byte, result any) error {
 	}
 
 	// If we're here, it means we don't know how to unmarshal the response body.
-	return derp.Internal(location, "Unsupported Content-Type", contentType, derp.WithInternalError())
+	return t.undecodableResponse(location, contentType)
+}
+
+// undecodableResponse reports a response that arrived intact, but in a form that cannot be
+// decoded into the caller's result.
+func (t *Transaction) undecodableResponse(location string, contentType string) error {
+
+	// Name what arrived, so the explanation says more than the status line
+	answered := "with no Content-Type"
+
+	if contentType != "" {
+		// RULE: Drop any rune the cut landed inside.  This header is written by the server, and
+		// a half-character would leave invalid UTF-8 in a message bound for a log and a web page.
+		answered = strings.ToValidUTF8(contentType[:min(len(contentType), contentTypeMaxLength)], "")
+	}
+
+	httpError := derp.NewHTTPError(t.request, t.response)
+	httpError.Message = "Server answered " + answered + ", which cannot be decoded into the requested result"
+
+	// RULE: Report 502 (Bad Gateway).  The upstream sent something unusable, a 500 would place the
+	// fault in this client, and callers branch on the difference (see IsUndecodableResponse).
+	return derp.Wrap(httpError, location, httpError.Message, derp.WithBadGateway())
+}
+
+// IsUndecodableResponse returns TRUE when a server answered successfully, but with a body that
+// could not be decoded into the result the caller asked for.
+func IsUndecodableResponse(err error) bool {
+
+	// RULE: Only remote's own 502 counts.  A 502 sent by the SERVER comes from a proxy whose
+	// origin is down, and the 2xx test below rejects it because its own status is 502.
+	if !derp.IsBadGateway(err) {
+		return false
+	}
+
+	// The response that actually arrived is carried by the HTTPError
+	var httpError derp.HTTPError
+
+	if !errors.As(err, &httpError) {
+		return false
+	}
+
+	status := httpError.Response.StatusCode
+	return (status >= http.StatusOK) && (status < http.StatusMultipleChoices)
 }

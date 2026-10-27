@@ -368,7 +368,7 @@ func (t *Transaction) processResponse(body []byte) error {
 		if t.failure != nil {
 			if err := t.decodeResponseBody(body, t.failure); err != nil {
 				err = derp.WrapHTTPError(err, t.request, t.response)
-				return derp.Wrap(err, location, "Parsing error response", body, derp.WithInternalError())
+				return derp.Wrap(err, location, "Parsing error response", derp.WithInternalError())
 			}
 		}
 
@@ -377,8 +377,10 @@ func (t *Transaction) processResponse(body []byte) error {
 
 	// Otherwise this is a success; decode the body into the success object.
 	if err := t.decodeResponseBody(body, t.success); err != nil {
-		err = derp.WrapHTTPError(err, t.request, t.response)
-		return derp.Wrap(err, location, "Processing response body", body, derp.WithInternalError())
+
+		// RULE: No second HTTPError, and no code override.  Every decode failure already carries
+		// the transaction and sets its own code; a second HTTPError would report the 2xx AS the code.
+		return derp.Wrap(err, location, "Processing response body")
 	}
 
 	// Two hundred and OK
