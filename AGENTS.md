@@ -43,6 +43,10 @@ Reading a stream consumes it, so `RequestBody` stores what it read back into `t.
 
 `ResponseBody` reads `maxSize+1` bytes so it can tell "at the limit" from "over the limit". A caller passing `math.MaxInt64` to mean "no practical limit" would overflow that into a negative count, and `io.LimitReader` reads NOTHING when N is negative — every response would come back empty, with no error. The `min(maxSize, math.MaxInt64-1)` clamp is important; `TestMaxResponseSize_HugeLimitDoesNotOverflow` pins it.
 
+## Decode errors never carry the result as a detail
+
+`decodeResponseBody` passes neither the body nor the caller's result to `derp.Wrap`. A detail is uncapped, and a failed decode can leave the result holding most of the body: `json.Unmarshal` keeps filling fields past a type error, `xml.Unmarshal` fills elements before a late syntax error, and a failing `io.Writer` has already received it. Attaching the result turns a 256 KB page into a 267 KB error record. The only body content in these errors is the 4 KB excerpt in derp's `HTTPError`, and `TestDecodeResponseBody_FailureOmitsResult` pins this.
+
 ## The seam
 
 SSRF hardening is centralized in [client.go](client.go) (`safeTransport`, `guardedDialContext`, `publicIPs`, `filterPublicIPs`, `baseTransport`). Public/non-public IP classification is delegated to `benpate/uri` (`uri.IsPublicIP`). To change what counts as "non-public," change it there, not here.

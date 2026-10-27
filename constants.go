@@ -51,6 +51,5 @@ const contentTypeNonStandardXMLText = "text/xml"
 // contentTypeNonStandardJSONText is a non-standard MIME Type that might be used by other systems for JSON content
 const contentTypeNonStandardJSONText = "text/json"
 
-// contentTypeMaxLength bounds the server-supplied media type quoted into an error message.
-// Every real one fits easily; this stops a hostile header from minting a new message per value.
+// contentTypeMaxLength caps how many bytes of a server's Content-Type are quoted into an error message
 const contentTypeMaxLength = 100
