@@ -16,9 +16,9 @@ func Opaque(opaqueValue string) remote.Option {
 	return remote.Option{
 
 		// This is executed on every Request before its sent to the server
-		ModifyRequest: func(_ *remote.Transaction, request *http.Request) *http.Response {
+		ModifyRequest: func(_ *remote.Transaction, request *http.Request) (*http.Response, error) {
 			request.URL.Opaque = opaqueValue
-			return nil
+			return nil, nil
 		},
 	}
 }

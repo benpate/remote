@@ -31,11 +31,11 @@ func TestServer(hostname string, filesystem fs.FS) remote.Option {
 	// Generate the actual option
 	return remote.Option{
 
-		ModifyRequest: func(_ *remote.Transaction, request *http.Request) *http.Response {
+		ModifyRequest: func(_ *remote.Transaction, request *http.Request) (*http.Response, error) {
 
 			// Only match requests for the specified hostname
 			if request.URL.Hostname() != hostname {
-				return nil
+				return nil, nil
 			}
 
 			// Locate the file using the URL path
@@ -43,7 +43,7 @@ func TestServer(hostname string, filesystem fs.FS) remote.Option {
 			file, err := filesystem.Open(filename)
 
 			if err != nil {
-				return errorResponse(request, err)
+				return errorResponse(request, err), nil
 			}
 
 			// Read the response from the fs.File
@@ -51,7 +51,7 @@ func TestServer(hostname string, filesystem fs.FS) remote.Option {
 
 			if err != nil {
 				_ = file.Close()
-				return errorResponse(request, err)
+				return errorResponse(request, err), nil
 			}
 
 			// Tie the file's lifetime to the response body so it is closed when
@@ -59,7 +59,7 @@ func TestServer(hostname string, filesystem fs.FS) remote.Option {
 			response.Body = fileBackedBody{ReadCloser: response.Body, file: file}
 
 			// I see this as a complete success!
-			return response
+			return response, nil
 		},
 	}
 }

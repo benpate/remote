@@ -118,13 +118,13 @@ func TestSend_ModifyRequestReplacesResponse(t *testing.T) {
 	// We point at a closed port to prove the network is never touched.
 	called := false
 	option := Option{
-		ModifyRequest: func(_ *Transaction, _ *http.Request) *http.Response {
+		ModifyRequest: func(_ *Transaction, _ *http.Request) (*http.Response, error) {
 			called = true
 			return &http.Response{
 				StatusCode: 200,
 				Header:     http.Header{ContentType: []string{ContentTypeJSON}},
 				Body:       io.NopCloser(strings.NewReader(`{"replaced":true}`)),
-			}
+			}, nil
 		},
 	}
 
@@ -134,6 +134,78 @@ func TestSend_ModifyRequestReplacesResponse(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, called)
 	require.Equal(t, true, result["replaced"])
+}
+
+// TestSend_ModifyRequestError verifies that a request refused by ModifyRequest is never sent,
+// and that the refusal reaches no later option, no AfterRequest hook, and no OnError hook
+func TestSend_ModifyRequestError(t *testing.T) {
+
+	requests := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		requests++
+	}))
+	defer ts.Close()
+
+	var afterRequest, onError, laterOption bool
+
+	refuse := Option{
+		ModifyRequest: func(*Transaction, *http.Request) (*http.Response, error) {
+			return nil, errSendTest
+		},
+		AfterRequest: func(*Transaction, *http.Response) error {
+			afterRequest = true
+			return nil
+		},
+		OnError: func(_ *Transaction, _ *http.Request, err error) error {
+			onError = true
+			return err
+		},
+	}
+
+	later := Option{
+		ModifyRequest: func(*Transaction, *http.Request) (*http.Response, error) {
+			laterOption = true
+			return nil, nil
+		},
+	}
+
+	err := Post(ts.URL).AllowPrivateIPs(true).With(refuse, later).Send()
+
+	require.ErrorIs(t, err, errSendTest)
+	require.Zero(t, requests)
+	require.False(t, afterRequest)
+	require.False(t, onError)
+	require.False(t, laterOption)
+}
+
+// closeRecorder is a response body that records whether it was closed
+type closeRecorder struct {
+	io.Reader
+	closed bool
+}
+
+// Close records the call
+func (recorder *closeRecorder) Close() error {
+	recorder.closed = true
+	return nil
+}
+
+// TestSend_ModifyRequestErrorWinsOverResponse verifies that a hook returning both an error and
+// a response refuses the request, and that the unused response body is closed
+func TestSend_ModifyRequestErrorWinsOverResponse(t *testing.T) {
+
+	body := &closeRecorder{Reader: strings.NewReader(`{}`)}
+
+	option := Option{
+		ModifyRequest: func(*Transaction, *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: 200, Body: body}, errSendTest
+		},
+	}
+
+	err := Get("http://127.0.0.1:0").AllowPrivateIPs(true).With(option).Send()
+
+	require.ErrorIs(t, err, errSendTest)
+	require.True(t, body.closed)
 }
 
 func TestSend_UnsupportedRequestContentType(t *testing.T) {

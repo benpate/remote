@@ -394,14 +394,21 @@ func (t *Transaction) executeRequest() error {
 
 	const location = "remote.Transaction.executeRequest"
 
+	// RULE: A ModifyRequest option may refuse the request. A refusal is not an answer from the
+	// remote server, so it reaches no OnError hook.
+	replacedResponse, err := t.onModifyRequest(t.request)
+
+	if err != nil {
+		return derp.Wrap(err, location, "Request refused by ModifyRequest option")
+	}
+
 	// A ModifyRequest option may replace the response; if so, use it and skip the network.
-	if replacedResponse := t.onModifyRequest(t.request); replacedResponse != nil {
+	if replacedResponse != nil {
 		t.response = replacedResponse
 		return nil
 	}
 
 	// Otherwise, send the request to the remote server using the assembled client.
-	var err error
 	t.response, err = t.buildClient().Do(t.request)
 
 	if err != nil {

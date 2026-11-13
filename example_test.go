@@ -172,9 +172,9 @@ func ExampleTransaction_With() {
 		AllowPrivateIPs(true).
 		With(options.BearerAuth("secret-token")).
 		With(remote.Option{
-			ModifyRequest: func(_ *remote.Transaction, request *http.Request) *http.Response {
+			ModifyRequest: func(_ *remote.Transaction, request *http.Request) (*http.Response, error) {
 				seen = request.Header.Get("Authorization")
-				return nil // returning nil sends the request as normal
+				return nil, nil // a nil response sends the request as normal
 			},
 		}).
 		Send()

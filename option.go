@@ -18,7 +18,8 @@ type Option struct {
 	// remote server. It can be used to modify the request, or to replace it entirely.
 	// If it returns a non-nil http.Response, then that is used INSTEAD OF calling the remote server.
 	// If it returns a nil http.Response, then the request is sent to the remote server as normal.
-	ModifyRequest func(*Transaction, *http.Request) *http.Response
+	// If it returns an error, then the request is never sent, and no AfterRequest or OnError hook runs.
+	ModifyRequest func(*Transaction, *http.Request) (*http.Response, error)
 
 	// AfterRequest is executed after an http.Response has been received from the remote server, but before it is
 	// parsed and returned to the calling application.
@@ -51,19 +52,47 @@ func (t *Transaction) onBeforeRequest() error {
 	return nil
 }
 
-// onModifyRequest runs each option's ModifyRequest hook, returning the first
-// non-nil response (which replaces the call to the remote server).
-func (t *Transaction) onModifyRequest(request *http.Request) *http.Response {
+// onModifyRequest runs each option's ModifyRequest hook, returning the first error or the
+// first non-nil response (which replaces the call to the remote server).
+func (t *Transaction) onModifyRequest(request *http.Request) (*http.Response, error) {
+
+	const location = "remote.Transaction.onModifyRequest"
 
 	for _, option := range t.options {
-		if option.ModifyRequest != nil {
-			if response := option.ModifyRequest(t, request); response != nil {
-				return response
-			}
+
+		if option.ModifyRequest == nil {
+			continue
+		}
+
+		response, err := option.ModifyRequest(t, request)
+
+		// RULE: An error wins over a response, so a refused request is never answered
+		if err != nil {
+			closeResponse(response)
+			return nil, derp.Wrap(err, location, "Error executing ModifyRequest option")
+		}
+
+		if response != nil {
+			return response, nil
 		}
 	}
 
-	return nil
+	// Send it as it stands
+	return nil, nil
+}
+
+// closeResponse closes the body of a response that will never be read
+func closeResponse(response *http.Response) {
+
+	if response == nil {
+		return
+	}
+
+	if response.Body == nil {
+		return
+	}
+
+	_ = response.Body.Close() // Nothing reads this response, so a failed Close has no one to tell
 }
 
 // onAfterRequest runs each option's AfterRequest hook, returning the first error.

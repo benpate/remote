@@ -19,7 +19,8 @@ func TestOpaque(t *testing.T) {
 	require.NoError(t, err)
 
 	// ModifyRequest returns nil (request is sent normally) but mutates the URL
-	response := option.ModifyRequest(nil, request)
+	response, err := option.ModifyRequest(nil, request)
+	require.NoError(t, err)
 	require.Nil(t, response)
 	require.Equal(t, "//custom/opaque/path", request.URL.Opaque)
 }
@@ -33,10 +34,12 @@ func TestDebug(t *testing.T) {
 	// ModifyRequest dumps the request and returns nil (does not replace it)
 	request, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	require.NoError(t, err)
-	require.Nil(t, option.ModifyRequest(nil, request))
+	response, err := option.ModifyRequest(nil, request)
+	require.NoError(t, err)
+	require.Nil(t, response)
 
 	// AfterRequest dumps the response and returns no error
-	response := &http.Response{
+	response = &http.Response{
 		StatusCode: 200,
 		Proto:      "HTTP/1.1",
 		Header:     http.Header{},
@@ -93,7 +96,8 @@ func TestTestServer_Match(t *testing.T) {
 	request, err := http.NewRequest(http.MethodGet, "http://example.com/users/1.json", nil)
 	require.NoError(t, err)
 
-	response := option.ModifyRequest(nil, request)
+	response, err := option.ModifyRequest(nil, request)
+	require.NoError(t, err)
 	require.NotNil(t, response)
 	require.Equal(t, 200, response.StatusCode)
 }
@@ -106,7 +110,9 @@ func TestTestServer_HostnameMismatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// A non-matching hostname passes through (returns nil)
-	require.Nil(t, option.ModifyRequest(nil, request))
+	response, err := option.ModifyRequest(nil, request)
+	require.NoError(t, err)
+	require.Nil(t, response)
 }
 
 func TestTestServer_FileNotFound(t *testing.T) {
@@ -117,7 +123,8 @@ func TestTestServer_FileNotFound(t *testing.T) {
 	require.NoError(t, err)
 
 	// A missing file produces a 404 response
-	response := option.ModifyRequest(nil, request)
+	response, err := option.ModifyRequest(nil, request)
+	require.NoError(t, err)
 	require.NotNil(t, response)
 	require.Equal(t, http.StatusNotFound, response.StatusCode)
 }
@@ -134,7 +141,8 @@ func TestTestServer_InvalidResponse(t *testing.T) {
 	request, err := http.NewRequest(http.MethodGet, "http://example.com/bad.json", nil)
 	require.NoError(t, err)
 
-	response := option.ModifyRequest(nil, request)
+	response, err := option.ModifyRequest(nil, request)
+	require.NoError(t, err)
 	require.NotNil(t, response)
 	require.Equal(t, http.StatusNotFound, response.StatusCode)
 }

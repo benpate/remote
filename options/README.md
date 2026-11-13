@@ -36,6 +36,8 @@ And one mocks the network entirely:
 
 * **Header options live in `BeforeRequest`; request-mutating options live in `ModifyRequest`.** Header options (`Accept`, `BasicAuth`, etc.) run before the `http.Request` exists, so they call `transaction.Header(...)`. `Opaque` and `Debug` need the assembled request, so they run later. This ordering is why a `BeforeRequest` option can't touch `request.URL` and a `ModifyRequest` option can't change a value the request was already built from — match the hook to what you need to mutate.
 
+* **`ModifyRequest` returns a response and an error, and an error refuses the request.** `return nil, nil` sends the request as it stands. A non-nil response replaces the call to the server and still reaches every `AfterRequest` hook. An error stops the request before it is sent, and reaches no `AfterRequest` or `OnError` hook, so a circuit breaker never counts it against the host. A signing option uses this to refuse a request it cannot sign.
+
 * **`AfterRequest` hears about responses; `OnError` hears about requests that got none.** A refused connection, a DNS or TLS failure, a timeout, and a redirect that `remote` refused never reach `AfterRequest`, because the client returned an error and not a response to read. An option that counts failures, such as a circuit breaker, needs both hooks. `OnError` receives the error as the HTTP client returned it, before `remote` wraps it.
 
 * **`TestServer` returns a response from `ModifyRequest`, which short-circuits the network — and that means the SSRF guards never run for mocked hosts.** That is intentional and exactly what you want in a test, but don't lean on `TestServer` to exercise the dialer-level private-IP or redirect guards; those only fire on a real dial.
