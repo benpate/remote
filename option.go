@@ -28,9 +28,9 @@ type Option struct {
 	// must close the reader it wrapped, or the underlying connection leaks.
 	AfterRequest func(*Transaction, *http.Response) error
 
-	// OnError is called when the request could not be completed and there is no response to read,
-	// such as a refused connection, a DNS or TLS failure, or a timeout. It receives the error as
-	// the HTTP client returned it, and returns the error to report, which is usually the same one.
+	// OnError is called when the HTTP client returns an error in place of a response to read, such
+	// as a refused connection, a DNS or TLS failure, a timeout, or a redirect that remote refused.
+	// It receives the client's own error, and returns the error to report, usually the same one.
 	OnError func(*Transaction, *http.Request, error) error
 }
 

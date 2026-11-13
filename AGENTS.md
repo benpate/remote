@@ -51,6 +51,10 @@ Reading a stream consumes it, so `RequestBody` stores what it read back into `t.
 
 SSRF hardening is centralized in [client.go](client.go) (`safeTransport`, `guardedDialContext`, `publicIPs`, `filterPublicIPs`, `baseTransport`). Public/non-public IP classification is delegated to `benpate/uri` (`uri.IsPublicIP`). To change what counts as "non-public," change it there, not here.
 
-## `OnError` runs only when there is no response, and cannot clear the error
+## `OnError` runs only when the client returns an error, and cannot clear the error
 
-A response with any status code, 500 included, goes to `AfterRequest`. `OnError` is for a request that produced no response at all, and `executeRequest` calls it with the client's raw error before `derp` wraps it, so a hook can still tell a timeout from a refused connection. Each hook receives the error the previous one returned. A hook that returns nil leaves the error as it was, because `Send` has no response to carry on with. A request that a `BeforeRequest` hook refused was never sent, so `OnError` does not run for it.
+A response with any status code, 500 included, goes to `AfterRequest`. `OnError` is for a request that the HTTP client failed with an error, and `executeRequest` calls it with the client's raw error before `derp` wraps it, so a hook can still tell a timeout from a refused connection. Each hook receives the error the previous one returned. A hook that returns nil leaves the error as it was, because `Send` has no response to carry on with. A request that a `BeforeRequest` hook refused was never sent, so `OnError` does not run for it. Three cases are easy to miss, and `onerror_test.go` pins each:
+
+- **A refused redirect reaches `OnError` with a response present.** When the chain passes the cap or leaves the allow-list, the client returns an error, and the transaction still holds the last redirect response with its body closed. The hook runs once for the whole chain.
+- **`remote`'s own refusals reach it too.** A dial that the private-IP guard blocks looks like any other failed connection, so an option that counts failures counts it against the host.
+- **A canceled context reaches it.** An option that counts failures should skip `context.Canceled`, which says nothing about the host. A URL that does not parse fails in `assembleRequest`, before anything is sent, and reaches no hook.
