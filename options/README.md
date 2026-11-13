@@ -36,6 +36,8 @@ And one mocks the network entirely:
 
 * **Header options live in `BeforeRequest`; request-mutating options live in `ModifyRequest`.** Header options (`Accept`, `BasicAuth`, etc.) run before the `http.Request` exists, so they call `transaction.Header(...)`. `Opaque` and `Debug` need the assembled request, so they run later. This ordering is why a `BeforeRequest` option can't touch `request.URL` and a `ModifyRequest` option can't change a value the request was already built from — match the hook to what you need to mutate.
 
+* **`AfterRequest` hears about responses; `OnError` hears about requests that got none.** A refused connection, a DNS or TLS failure, and a timeout never reach `AfterRequest`, because there is no response. An option that counts failures, such as a circuit breaker, needs both hooks. `OnError` receives the error as the HTTP client returned it, before `remote` wraps it.
+
 * **`TestServer` returns a response from `ModifyRequest`, which short-circuits the network — and that means the SSRF guards never run for mocked hosts.** That is intentional and exactly what you want in a test, but don't lean on `TestServer` to exercise the dialer-level private-IP or redirect guards; those only fire on a real dial.
 
 * **`TestServer` files are raw HTTP responses, not bare bodies.** Each fixture is parsed with `http.ReadResponse`, so a file must include a status line and headers (e.g. `HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{...}`), not just the body. The opened file's lifetime is tied to the response body, so it is closed when the caller closes the body — don't add your own close.

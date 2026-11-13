@@ -104,7 +104,7 @@ err := remote.Get("https://jsonplaceholder.typicode.com/users").
     Send()
 ```
 
-See the [options README](options/README.md) for the full list. An `Option` exposes three hooks — `BeforeRequest`, `ModifyRequest`, and `AfterRequest` — so you can write your own; the included options are short and make good templates.
+See the [options README](options/README.md) for the full list. An `Option` exposes four hooks — `BeforeRequest`, `ModifyRequest`, `AfterRequest`, and `OnError` — so you can write your own; the included options are short and make good templates.
 
 ## Custom Transport
 

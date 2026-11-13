@@ -19,7 +19,7 @@
 //     Transaction, which Header, Query, Form, Body, JSON, and XML fill in.
 //   - Reading a response — Result and Error name the objects to decode into,
 //     and the Response* methods expose the raw http.Response underneath.
-//   - Hooks — an Option carries BeforeRequest, ModifyRequest, and AfterRequest
+//   - Hooks — an Option carries BeforeRequest, ModifyRequest, AfterRequest, and OnError
 //     functions that observe or rewrite a transaction as it runs. The options
 //     subpackage ships the common ones (auth headers, debugging, a test server).
 //   - Guardrails — every request is bounded by a timeout, a redirect cap, and a

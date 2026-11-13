@@ -27,6 +27,11 @@ type Option struct {
 	// replaced. remote closes only the outermost body, so the wrapper's Close
 	// must close the reader it wrapped, or the underlying connection leaks.
 	AfterRequest func(*Transaction, *http.Response) error
+
+	// OnError is called when the request could not be completed and there is no response to read,
+	// such as a refused connection, a DNS or TLS failure, or a timeout. It receives the error as
+	// the HTTP client returned it, and returns the error to report, which is usually the same one.
+	OnError func(*Transaction, *http.Request, error) error
 }
 
 // onBeforeRequest runs each option's BeforeRequest hook, returning the first error.
@@ -76,6 +81,24 @@ func (t *Transaction) onAfterRequest(response *http.Response) error {
 
 	// Nothing to see here, move along
 	return nil
+}
+
+// onError runs each option's OnError hook in order, handing each one the error that the last returned
+func (t *Transaction) onError(request *http.Request, err error) error {
+
+	for _, option := range t.options {
+
+		if option.OnError == nil {
+			continue
+		}
+
+		// RULE: A hook cannot turn a failed request into a success, because there is no response
+		if replaced := option.OnError(t, request, err); replaced != nil {
+			err = replaced
+		}
+	}
+
+	return err
 }
 
 // Options extracts valid remote.Option values from a list of `any` values.

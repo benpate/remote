@@ -50,3 +50,7 @@ Reading a stream consumes it, so `RequestBody` stores what it read back into `t.
 ## The seam
 
 SSRF hardening is centralized in [client.go](client.go) (`safeTransport`, `guardedDialContext`, `publicIPs`, `filterPublicIPs`, `baseTransport`). Public/non-public IP classification is delegated to `benpate/uri` (`uri.IsPublicIP`). To change what counts as "non-public," change it there, not here.
+
+## `OnError` runs only when there is no response, and cannot clear the error
+
+A response with any status code, 500 included, goes to `AfterRequest`. `OnError` is for a request that produced no response at all, and `executeRequest` calls it with the client's raw error before `derp` wraps it, so a hook can still tell a timeout from a refused connection. Each hook receives the error the previous one returned. A hook that returns nil leaves the error as it was, because `Send` has no response to carry on with. A request that a `BeforeRequest` hook refused was never sent, so `OnError` does not run for it.

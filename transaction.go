@@ -405,6 +405,10 @@ func (t *Transaction) executeRequest() error {
 	t.response, err = t.buildClient().Do(t.request)
 
 	if err != nil {
+
+		// Let each OnError option see the failure as the client returned it, before it is wrapped
+		err = t.onError(t.request, err)
+
 		err = derp.WrapHTTPError(err, t.request, t.response)
 		return derp.Wrap(err, location, "Sending HTTP request", derp.WithInternalError())
 	}
